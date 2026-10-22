@@ -1,5 +1,6 @@
 package com.miaomiaotv.aerial.core
 
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -12,27 +13,42 @@ import java.net.URL
  * 和 [ReleaseChecker]（查的是 Aerial 桌面）分开：这边看的是本仓库的 Release，
  * 只关心一个资产——`AerialToolbox-<version>.apk`。
  * 没有资产就当成「没有可用更新」，避免让用户下到一个只带源码的 tag。
+ *
+ * 本仓库还托管着代构建的 `cyt-v*` 发行版，它比工具箱的版本号更晚，
+ * `releases/latest` 会拿到它 —— 所以这里扫列表，挑第一条**真的带工具箱安装包**的发行版。
  */
 object ToolboxUpdater {
 
     private const val USER_AGENT = "AerialToolbox-Updater/1.0 (Android)"
 
-    /** 取最新发行版；网络不通或该 Release 没挂 APK 时返回 null */
+    /** 取最新发行版；网络不通或没有带 APK 的发行版时返回 null */
     fun latest(): RemoteRelease? {
-        val body = runCatching { httpGet(ToolboxInfo.API_LATEST) }.getOrNull() ?: return null
-        val json = runCatching { JSONObject(body) }.getOrNull() ?: return null
-        val tag = json.optString("tag_name")
-        val apk = apkUrl(json) ?: return null
-        return RemoteRelease(
-            version = VersionCompare.normalize(tag),
-            tag = tag,
-            standardUrl = apk,
-            guardUrl = apk,
-            source = "GitHub",
-            changelog = json.optString("body"),
-            publishedAt = json.optString("published_at").take(10),
-            pageUrl = json.optString("html_url").ifBlank { ToolboxInfo.RELEASE_PAGE }
-        )
+        val body = runCatching { httpGet(ToolboxInfo.API_LIST) }.getOrNull() ?: return null
+        val text = body.trim()
+        val candidates: List<JSONObject> = runCatching {
+            if (text.startsWith("[")) {
+                val array = JSONArray(text)
+                (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+            } else {
+                listOf(JSONObject(text))
+            }
+        }.getOrNull() ?: return null
+
+        for (json in candidates) {
+            val apk = apkUrl(json) ?: continue
+            val tag = json.optString("tag_name")
+            return RemoteRelease(
+                version = VersionCompare.normalize(tag),
+                tag = tag,
+                standardUrl = apk,
+                guardUrl = apk,
+                source = "GitHub",
+                changelog = json.optString("body"),
+                publishedAt = json.optString("published_at").take(10),
+                pageUrl = json.optString("html_url").ifBlank { ToolboxInfo.RELEASE_PAGE }
+            )
+        }
+        return null
     }
 
     /** 在 Release 资产里找安装包，sha256 之类的附属文件跳过 */

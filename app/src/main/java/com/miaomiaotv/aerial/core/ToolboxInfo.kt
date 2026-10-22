@@ -15,7 +15,12 @@ object ToolboxInfo {
     const val REPO_OWNER = "mmaotv"
     const val REPO_NAME = "AerialToolbox"
 
-    const val API_LATEST = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+    /**
+     * 本仓库同时还有代构建的 CleanYourTV 发行版（`cyt-v*`），
+     * 所以 `releases/latest` 未必是工具箱自己的那一个 —— 找自己必须扫列表、只认带安装包的那条。
+     */
+    const val API_LIST = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases?per_page=30"
+
     const val RELEASE_PAGE = "https://github.com/$REPO_OWNER/$REPO_NAME/releases/latest"
 
     /** Release 里安装包的名字前缀：AerialToolbox-1.3.0.apk */
