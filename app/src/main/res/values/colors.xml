@@ -1,19 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  配色与上游 Aerial（app.orchard.tv）完全一致。
+  取自 aerial-tv/app/src/main/java/app/orchard/tv/ui/theme/Theme.kt 的 Palette，
+  即 Apple tvOS 深色外观的系统色；品牌色取自 docs/brand/icon.svg 的渐变。
+-->
 <resources>
-    <color name="accent">#FF00E0B0</color>
-    <color name="accent_soft">#3300E0B0</color>
-    <color name="bg_top">#FF16202B</color>
-    <color name="bg_bottom">#FF080B0F</color>
+    <!-- 品牌渐变：图标与网站 logo 用同一组色 -->
+    <color name="brand_start">#FF2FD0A5</color>
+    <color name="brand_end">#FF5B5BF0</color>
 
-    <!-- 卡片填充（不透明，保证边框层次干净） -->
-    <color name="card_fill">#FF1F2933</color>
-    <color name="card_fill_focused">#FF26323E</color>
-    <color name="stroke_normal">#FF33404D</color>
+    <!-- 背景 -->
+    <color name="background">#FF000000</color>
+    <color name="dim">#B3000000</color>
 
+    <!-- 文字：Label / SecondaryLabel / TertiaryLabel -->
     <color name="text_primary">#FFFFFFFF</color>
-    <color name="text_secondary">#FF93A3B0</color>
-    <color name="dialog_bg">#FF1B242E</color>
-    <color name="dim">#D9000000</color>
-    <color name="ok">#FF4CD97E</color>
-    <color name="warn">#FFFFB020</color>
+    <color name="text_secondary">#99EBEBF5</color>
+    <color name="text_tertiary">#4DEBEBF5</color>
+
+    <!-- 面：Glass / Fill / FillStrong / Hairline -->
+    <color name="glass">#E6202022</color>
+    <color name="fill">#2E787880</color>
+    <color name="fill_strong">#52787880</color>
+    <color name="hairline">#1AFFFFFF</color>
+
+    <!-- 状态色 -->
+    <color name="ok">#FF30D158</color>
+    <color name="warn">#FFFF9F0A</color>
+    <color name="danger">#FFFF453A</color>
+
+    <!-- 焦点：tvOS 的聚焦控件是近白色板 + 深色内容 -->
+    <color name="focus">#FFF5F5F7</color>
+    <color name="on_focus">#FF1D1D1F</color>
+
+    <!-- 强调色（进度、选中标记） -->
+    <color name="accent">#FF2FD0A5</color>
 </resources>

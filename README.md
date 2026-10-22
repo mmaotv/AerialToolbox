@@ -4,6 +4,11 @@
 
 **不需要电脑、不需要 root、不需要拆机** —— 把它装到电视上，剩下的它自己用电视本机的调试通道完成。
 
+界面、图标与字体都按 Aerial 自己的设计语言做（同一个品牌渐变、同一套 tvOS 配色、同一份 Inter 字体），
+在电视应用列表里它和 Aerial 是同一个体系的东西。
+
+![界面](docs/screenshot-main.png)
+
 <p align="left">
 <img alt="minSdk" src="https://img.shields.io/badge/minSdk-21-brightgreen">
 <img alt="Android TV" src="https://img.shields.io/badge/Android%20TV-leanback-blue">
@@ -99,6 +104,7 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 app/src/main/
 ├── assets/bundled/            内置离线包（官方 Release 的 standard / guard 两个 APK）
 │   └── meta.properties        内置包版本号与日期
+├── assets/fonts/inter.ttf     Inter 可变字体（与 Aerial 同一份）
 ├── java/com/miaomiaotv/aerial/
 │   ├── adb/                   自实现的 ADB 协议与密钥（CNXN / AUTH / OPEN / WRTE）
 │   ├── apk/ApkProvider.kt     交给系统安装器的只读文件提供者
@@ -108,10 +114,21 @@ app/src/main/
 │   │   ├── BundledRelease.kt  释放内置离线包
 │   │   ├── ReleaseChecker.kt  GitHub Release 查询、镜像兜底、下载
 │   │   └── AdbSession.kt      全局唯一调试通道
+│   ├── Ui.kt                  字体与状态胶囊（Inter 字重、焦点反白）
 │   ├── MainActivity.kt        主界面（安装、接管、开关、还原）
 │   └── UpdateActivity.kt      桌面更新页（查版本、看日志、下载安装）
-└── res/layout/                TV 版 XML 布局（遥控器焦点）
+└── res/
+    ├── layout/                TV 版 XML 布局（遥控器焦点）
+    ├── color/                 焦点态文字色 selector（跟随卡片焦点）
+    ├── values/                配色（对照上游 Palette）、字号刻度、按钮样式
+    ├── drawable*/             面板 / 卡片 / 按钮（焦点反白）、品牌标、TV banner
+    └── mipmap-*/              各密度图标 + API 26 自适应图标
 ```
+
+配色与字号的取值直接对照上游
+`app/src/main/java/app/orchard/tv/ui/theme/Theme.kt`：`Background #000000`、
+`Fill #2E787880`、`Hairline #1AFFFFFF`、焦点 `#F5F5F7 / #1D1D1F`，
+字号用它的 `LargeTitle 26 / Title 19 / Callout 13 / Caption 11` 四档。
 
 ## 构建
 
@@ -127,7 +144,7 @@ app/src/main/
 
 ## 更新内置离线包
 
-内置包决定「离线安装」的版本，升级步骤如下：
+内置包决定「离线安装」的版本，当前内置的是 **v1.30（2026-10-22）**。升级步骤如下：
 
 1. 从 [aerial-tv Releases](https://github.com/pengchujin/aerial-tv/releases) 下载
    `aerial-standard.apk` 与 `aerial-guard.apk`，覆盖 `app/src/main/assets/bundled/`。

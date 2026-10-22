@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  未选中：外层铺满描边色，内层向内 inset 出边框宽度，
-  这样四周边框宽度绝对均匀，不受 stroke 绘制方式的限制。
--->
+<!-- 未聚焦卡片：Fill 底 + Hairline 描边（外层铺满描边色，内层 inset，四边宽度绝对均匀） -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/stroke_normal" />
+            <solid android:color="@color/hairline" />
             <corners android:radius="20dp" />
         </shape>
     </item>
     <item
-        android:bottom="1.5dp"
-        android:left="1.5dp"
-        android:right="1.5dp"
-        android:top="1.5dp">
+        android:bottom="1dp"
+        android:left="1dp"
+        android:right="1dp"
+        android:top="1dp">
         <shape android:shape="rectangle">
-            <solid android:color="@color/card_fill" />
-            <corners android:radius="18.5dp" />
+            <solid android:color="@color/fill" />
+            <corners android:radius="19dp" />
         </shape>
     </item>
 </layer-list>

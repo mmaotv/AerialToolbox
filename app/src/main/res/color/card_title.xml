@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 卡片标题：跟随父容器（卡片）的焦点状态切换成深色 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/on_focus" android:state_focused="true" />
+    <item android:color="@color/text_primary" />
+</selector>

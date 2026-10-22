@@ -18,3 +18,4 @@ dist/*.sha256
 *.jks
 *.keystore
 captures/
+dist/*.png

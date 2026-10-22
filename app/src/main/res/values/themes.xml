@@ -1,9 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 使用系统默认主题（Android 5.0 起即内置），不引入 AppCompat / Material 依赖 -->
+    <!--
+      与上游 Aerial 同一个主题基座：DeviceDefault.NoActionBar，全屏纯黑。
+      只使用系统自带控件，不引入 AppCompat / Material 依赖（minSdk 21 要兼容老 TV）。
+    -->
     <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-        <!-- TV 上全屏沉浸，界面更像原生电视应用 -->
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:colorBackground">@color/background</item>
+    </style>
+
+    <!-- 文字基座：Text.* 的公共父级（点号命名会隐式继承同名前缀） -->
+    <style name="Text" />
+
+    <!-- 大标题：26sp / W600，对应上游 Type.LargeTitle -->
+    <style name="Text.LargeTitle">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 区块标题：19sp / W600，对应 Type.Title -->
+    <style name="Text.Title">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">19sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 卡片说明：13sp / W500，对应 Type.Callout -->
+    <style name="Text.Callout">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 小标签：11sp / W500，对应 Type.Caption（电视观看距离下用 60% 白保证可读） -->
+    <style name="Text.Caption">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 按钮基座：去掉系统按钮的阴影与最小宽度，纯色板 + 焦点反白 -->
+    <style name="Btn" parent="@android:style/Widget.DeviceDefault.Button">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+    </style>
+
+    <!-- 主操作：品牌渐变，聚焦转白板 -->
+    <style name="Btn.Primary">
+        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:textColor">@color/btn_primary_text</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- 次操作：Fill 底，聚焦转白板 -->
+    <style name="Btn.Ghost">
+        <item name="android:background">@drawable/btn_ghost</item>
+        <item name="android:textColor">@color/btn_ghost_text</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 危险操作（还原/卸载）：文案用警示色，聚焦仍是白板 -->
+    <style name="Btn.Danger">
+        <item name="android:background">@drawable/btn_ghost</item>
+        <item name="android:textColor">@color/btn_ghost_text</item>
+        <item name="android:textSize">14sp</item>
     </style>
 </resources>

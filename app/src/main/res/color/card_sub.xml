@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 卡片说明文字：聚焦后转为次级深色，保持层级 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#991D1D1F" android:state_focused="true" />
+    <item android:color="@color/text_secondary" />
+</selector>

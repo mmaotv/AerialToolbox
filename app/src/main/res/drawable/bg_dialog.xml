@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 弹窗：Glass 底 + Hairline 描边，tvOS 的浮层质感 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/dialog_bg" />
-    <stroke android:width="1.5dp" android:color="@color/accent_soft" />
+    <solid android:color="@color/glass" />
+    <stroke android:width="1dp" android:color="@color/hairline" />
     <corners android:radius="26dp" />
 </shape>

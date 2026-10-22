@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 进度条：Fill 轨道 + 品牌渐变（#2FD0A5 → #5B5BF0，与图标同一组色） -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
-            <solid android:color="#33FFFFFF" />
+            <solid android:color="@color/fill" />
             <corners android:radius="5dp" />
         </shape>
     </item>
@@ -11,8 +12,8 @@
             <shape android:shape="rectangle">
                 <gradient
                     android:angle="0"
-                    android:endColor="#FF00B0FF"
-                    android:startColor="@color/accent" />
+                    android:endColor="@color/brand_end"
+                    android:startColor="@color/brand_start" />
                 <corners android:radius="5dp" />
             </shape>
         </clip>

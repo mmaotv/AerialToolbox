@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 主按钮常态：品牌渐变（与图标同一组色）；聚焦时转白板，见 selector -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:endColor="@color/brand_end"
+        android:startColor="@color/brand_start" />
+    <corners android:radius="14dp" />
+</shape>

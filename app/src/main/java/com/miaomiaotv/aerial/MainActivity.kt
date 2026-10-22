@@ -93,6 +93,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        Ui.apply(window.decorView)
 
         settings = AerialSettings(this)
         bundled = BundledRelease(this)
@@ -169,7 +170,7 @@ class MainActivity : Activity() {
                 .onFailure { Log.e(TAG, "密钥初始化失败", it) }
                 .getOrNull()
             if (identity == null) {
-                status("密钥初始化失败")
+                status("密钥初始化失败", STATE_WARN)
                 return@execute
             }
 
@@ -180,7 +181,7 @@ class MainActivity : Activity() {
 
             val candidate = AdbChannel()
             candidate.attachIdentity(identity)
-            candidate.onNeedAuthorization = { status("请在电视上选择「允许」调试授权") }
+            candidate.onNeedAuthorization = { status("请在电视上选择「允许」调试授权", STATE_WARN) }
 
             try {
                 candidate.connect(TARGET_HOST, TARGET_PORT, CONNECT_TIMEOUT_MS)
@@ -192,7 +193,7 @@ class MainActivity : Activity() {
                 )
                 runner = r
                 AdbSession.attach(candidate, r)
-                status("调试通道已连接")
+                status("调试通道已连接", STATE_OK)
                 log("已连接本机调试通道 $TARGET_HOST:$TARGET_PORT")
 
                 val info = r.deviceInfo()
@@ -204,7 +205,7 @@ class MainActivity : Activity() {
                 buildActionGrid()
             } catch (e: UnauthorizedException) {
                 candidate.disconnect()
-                status("未获得调试授权")
+                status("未获得调试授权", STATE_WARN)
                 showDone(
                     "需要在电视上允许调试授权",
                     listOf(
@@ -216,7 +217,7 @@ class MainActivity : Activity() {
                 )
             } catch (e: Exception) {
                 candidate.disconnect()
-                status("未连接本机调试通道")
+                status("未连接本机调试通道", STATE_WARN)
                 log("连接失败：${e.message}")
                 showDone(
                     "先打开电视的 ADB 调试",
@@ -268,47 +269,47 @@ class MainActivity : Activity() {
             Action(
                 title = if (installed == null) "一键安装桌面" else "一键安装 / 升级桌面",
                 subtitle = when {
-                    installedIsNewer -> "本机 v$installed 比内置包 v$bundledVersion 新，重装会降级"
-                    bundledVersion.isNotBlank() -> "用内置离线包 v$bundledVersion 安装，无需联网"
-                    else -> "内置包缺失，将联网下载最新版安装"
+                    installedIsNewer -> "本机版本更新，重装会降级"
+                    bundledVersion.isNotBlank() -> "内置 v$bundledVersion，离线直装"
+                    else -> "内置包缺失，需联网下载"
                 },
                 enabled = connected && !busy
             ) { startInstall() },
             Action(
                 title = "桌面更新",
-                subtitle = "联网查 GitHub 最新版，看更新日志后下载安装",
+                subtitle = "查 GitHub 新版，看日志再升级",
                 enabled = !busy
             ) { openUpdatePage() },
             Action(
                 title = "修复接管",
-                subtitle = "按主页键回原桌面、守护掉线时用（不重装）",
+                subtitle = "主页键失灵、守护掉线时用",
                 enabled = connected && installed != null && !busy
             ) { startRepair() },
             Action(
                 title = "验收检查",
-                subtitle = "按主页键是否进入 Aerial，共 4 项",
+                subtitle = "确认主页键是否进入 Aerial",
                 enabled = connected && installed != null && !busy
             ) { startVerify() },
             Action(
                 title = if (settings.useGuard) "安装通道：guard 版" else "安装通道：标准版",
                 subtitle = if (settings.useGuard)
-                    "不带 HOME 声明，靠无障碍服务接管（部分 TCL/海信）"
-                else "正常声明 HOME 的桌面应用（小米等推荐）",
+                    "靠无障碍守护接管（TCL/海信）"
+                else "正常声明 HOME（小米推荐）",
                 enabled = !busy
             ) { toggleFlavor() },
             Action(
                 title = if (settings.keepAdb) "ADB 常开：开" else "ADB 常开：关",
-                subtitle = "小米待机唤醒会自己关掉 ADB，开启后由桌面自动恢复",
+                subtitle = "待机唤醒后自动恢复 ADB",
                 enabled = !busy
             ) { toggleKeepAdb() },
             Action(
                 title = if (settings.ownScreensaver) "屏保接管：开" else "屏保接管：关",
-                subtitle = "只对使用系统屏保的电视有效（如 TCL）",
+                subtitle = "把系统屏保换成航拍（TCL）",
                 enabled = !busy
             ) { toggleScreensaver() },
             Action(
                 title = "还原 / 卸载",
-                subtitle = "撤销授权与设置，可一并卸载 Aerial",
+                subtitle = "撤销接管，可一并卸载",
                 enabled = connected && installed != null && !busy
             ) { showRestoreConfirm() }
         )
@@ -322,9 +323,10 @@ class MainActivity : Activity() {
             row.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
             )
-            for (column in 0..1) {
+            for (column in 0 until GRID_COLUMNS) {
                 val action = actions.getOrNull(index) ?: break
                 val card = inflater.inflate(R.layout.item_action, row, false)
+                Ui.apply(card)
                 card.findViewById<TextView>(R.id.tvTitle).text = action.title
                 card.findViewById<TextView>(R.id.tvSub).text = action.subtitle
                 card.alpha = if (action.enabled) 1f else 0.4f
@@ -337,8 +339,8 @@ class MainActivity : Activity() {
                 row.addView(card)
                 index++
             }
-            // 补齐最后一行不足两列时的空位，保证宽度一致
-            while (row.childCount < 2) {
+            // 补齐最后一行不足时的空位，保证卡片宽度一致
+            while (row.childCount < GRID_COLUMNS) {
                 val placeholder = View(this)
                 placeholder.layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
                 row.addView(placeholder)
@@ -672,10 +674,18 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun status(text: String) {
-        handler.post { statusText.text = text }
+    /** 状态胶囊：文字前带一个状态点，绿=通道可用、橙=等待授权或失败、灰=未知 */
+    @Suppress("DEPRECATION")
+    private fun status(text: String, state: Int = STATE_NONE) {
+        handler.post {
+            val color = when (state) {
+                STATE_OK -> resources.getColor(R.color.ok)
+                STATE_WARN -> resources.getColor(R.color.warn)
+                else -> resources.getColor(R.color.text_tertiary)
+            }
+            Ui.status(statusText, text, color)
+        }
     }
-
     private fun log(line: String) {
         Log.i(TAG, line)
         handler.post {
@@ -723,6 +733,13 @@ class MainActivity : Activity() {
 
         const val KEYS_DIR = "keys"
         const val FOCUS_SCALE = 1.03f
+
+        /** 操作卡片列数：3 列更像 tvOS 的 app 宫格 */
+        const val GRID_COLUMNS = 3
+
+        const val STATE_NONE = 0
+        const val STATE_OK = 1
+        const val STATE_WARN = 2
         const val REQUEST_STORAGE = 1001
     }
 }

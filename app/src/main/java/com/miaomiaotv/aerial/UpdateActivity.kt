@@ -66,6 +66,7 @@ class UpdateActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_update)
+        Ui.apply(window.decorView)
 
         settings = AerialSettings(this)
         bundled = BundledRelease(this)
@@ -114,7 +115,7 @@ class UpdateActivity : Activity() {
         } else {
             "未内置"
         }
-        statusText.text = if (AdbSession.connected) "调试通道已连接" else "未连接：只能交给系统安装器"
+        status(if (AdbSession.connected) "调试通道已连接" else "未连接：只能交给系统安装器", AdbSession.connected)
         renderInstalled(AdbSession.installedVersion)
         if (!info.available) {
             bundledButton.isEnabled = false
@@ -143,13 +144,23 @@ class UpdateActivity : Activity() {
         }
     }
 
-    // ===================== 线上检查 =====================
+    /** 状态胶囊：绿点=通道可用 / 橙点=失败或未连接 / 灰点=进行中 */
+    @Suppress("DEPRECATION")
+    private fun status(text: String, ok: Boolean? = null) {
+        val color = when (ok) {
+            true -> resources.getColor(R.color.ok)
+            false -> resources.getColor(R.color.warn)
+            else -> resources.getColor(R.color.text_tertiary)
+        }
+        Ui.status(statusText, text, color)
+    }
 
+    // ===================== 线上检查 =====================
     private fun checkOnline(manual: Boolean) {
         if (busy) return
         busy = true
         setBusy(true, "正在查询 GitHub 最新发行版…", 0)
-        statusText.text = getString(R.string.update_checking)
+        status(getString(R.string.update_checking))
 
         executor.execute {
             val release = runCatching { ReleaseChecker.latest() }.getOrNull()
@@ -157,7 +168,7 @@ class UpdateActivity : Activity() {
             ui {
                 setBusy(false, "", 0)
                 if (release == null) {
-                    statusText.text = "检查失败"
+                    status("检查失败", false)
                     onlineText.text = "无法获取"
                     changelogText.text = buildString {
                         append("连不上 GitHub，也拿不到官网镜像。\n\n")
@@ -175,12 +186,15 @@ class UpdateActivity : Activity() {
                     } else {
                         VersionCompare.compare(release.version, installed) > 0
                     }
-                    statusText.text = when {
-                        release.version.isBlank() -> "已获取（${release.source}）"
-                        installed.isNullOrBlank() -> "线上 v${release.version}"
-                        newer -> "线上 v${release.version}，本机 v$installed"
-                        else -> "已是最新版 v${release.version}"
-                    }
+                    status(
+                        when {
+                            release.version.isBlank() -> "已获取（${release.source}）"
+                            installed.isNullOrBlank() -> "线上 v${release.version}"
+                            newer -> "线上 v${release.version}，本机 v$installed"
+                            else -> "已是最新版 v${release.version}"
+                        },
+                        true
+                    )
                     onlineText.text = buildString {
                         append(if (release.version.isBlank()) "最新" else "v${release.version}")
                         if (release.publishedAt.isNotBlank()) append("（${release.publishedAt}）")
