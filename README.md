@@ -9,6 +9,8 @@
 
 ![界面](docs/screenshot-main.png)
 
+<sub>上图是按布局 dp 数值还原的版式示意图（`tools/make_preview.py`），不是运行截图。</sub>
+
 <p align="left">
 <img alt="minSdk" src="https://img.shields.io/badge/minSdk-21-brightgreen">
 <img alt="Android TV" src="https://img.shields.io/badge/Android%20TV-leanback-blue">
