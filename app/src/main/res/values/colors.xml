@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent">#FF00E0B0</color>
+    <color name="accent_soft">#3300E0B0</color>
+    <color name="bg_top">#FF16202B</color>
+    <color name="bg_bottom">#FF080B0F</color>
+
+    <!-- 卡片填充（不透明，保证边框层次干净） -->
+    <color name="card_fill">#FF1F2933</color>
+    <color name="card_fill_focused">#FF26323E</color>
+    <color name="stroke_normal">#FF33404D</color>
+
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FF93A3B0</color>
+    <color name="dialog_bg">#FF1B242E</color>
+    <color name="dim">#D9000000</color>
+    <color name="ok">#FF4CD97E</color>
+    <color name="warn">#FFFFB020</color>
+</resources>

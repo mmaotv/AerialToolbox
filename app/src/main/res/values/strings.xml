@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aerial 工具箱</string>
+    <string name="app_subtitle">安装 / 接管 / 升级 电视桌面</string>
+
+    <string name="connecting">正在连接本机调试通道…</string>
+    <string name="reconnect">重新连接</string>
+
+    <string name="info_device">设备</string>
+    <string name="info_desktop">桌面状态</string>
+    <string name="dash">—</string>
+
+    <string name="working_title">正在处理</string>
+    <string name="preparing">准备中…</string>
+    <string name="percent_zero">0%</string>
+    <string name="btn_ok">知道了</string>
+
+    <string name="restore_only">仅还原设置</string>
+    <string name="restore_uninstall">还原并卸载</string>
+    <string name="cancel">取消</string>
+
+    <!-- 桌面更新页 -->
+    <string name="back">返回</string>
+    <string name="update_title">桌面更新</string>
+    <string name="update_subtitle">安装不联网，更新时才查 GitHub</string>
+    <string name="update_checking">正在检查线上版本…</string>
+    <string name="info_bundled">内置离线包</string>
+    <string name="info_installed">已安装</string>
+    <string name="info_online">线上最新</string>
+    <string name="changelog_title">更新日志</string>
+    <string name="changelog_loading">正在获取更新日志…</string>
+    <string name="btn_check_online">重新检查</string>
+    <string name="btn_download_install">下载并安装</string>
+    <string name="btn_reinstall_bundled">用内置包重装</string>
+    <string name="btn_know">知道了</string>
+</resources>

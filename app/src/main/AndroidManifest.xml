@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 与本机调试通道通信；下载 Aerial 安装包 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 把下载好的安装包放到公共下载目录，供安装命令读取。
+         仅 Android 9 及以下需要申请，更高版本由系统放行（targetSdk 28 走传统存储策略）。 -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- ADB 不可用时改走系统安装器；Android 8 起声明后才能拉起安装界面 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- 电视/盒子没有触摸屏，必须声明为不需要，否则部分设备不允许安装 -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <!-- LEANBACK_LAUNCHER：让工具出现在电视/盒子的应用列表中 -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 桌面更新页：单独一屏，进去才联网查 GitHub。
+             exported=true 是为了装完 Aerial 抢到前台后，能用本机 shell 的 am start 把本页叫回来
+             （非导出组件在部分固件上会被拦），页面本身没有任何自动动作，必须用户点按钮。 -->
+        <activity
+            android:name=".UpdateActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape" />
+
+        <!-- 只读地把缓存里的安装包交给系统安装器，不导出 -->
+        <provider
+            android:name=".apk.ApkProvider"
+            android:authorities="${applicationId}.apk"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+
+</manifest>

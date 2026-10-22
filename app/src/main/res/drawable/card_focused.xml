@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  选中：同上的分层画法，外框换成主题色并加粗到 3dp，
+  内层填充略亮一档，让选中状态一眼可辨。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="3dp"
+        android:left="3dp"
+        android:right="3dp"
+        android:top="3dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/card_fill_focused" />
+            <corners android:radius="17dp" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  应用图标：电视屏幕 + 播放三角，表示「给电视换桌面」。
+  单个 vector 绘制，不使用渐变，保证安卓 5.1 等老设备也能正常渲染。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- 底板 -->
+    <path
+        android:fillColor="#FF00E0B0"
+        android:pathData="M8,3 H40 A5,5 0 0 1 45,8 V40 A5,5 0 0 1 40,45 H8 A5,5 0 0 1 3,40 V8 A5,5 0 0 1 8,3 Z" />
+
+    <!-- 屏幕 -->
+    <path
+        android:fillColor="#FF0F1519"
+        android:pathData="M13,11 H35 A2,2 0 0 1 37,13 V30 A2,2 0 0 1 35,32 H13 A2,2 0 0 1 11,30 V13 A2,2 0 0 1 13,11 Z" />
+
+    <!-- 底座 -->
+    <path
+        android:fillColor="#FF0F1519"
+        android:pathData="M21,34 H27 V36 H21 Z M16,37 H32 A1,1 0 0 1 33,38 V39 A1,1 0 0 1 32,40 H16 A1,1 0 0 1 15,39 V38 A1,1 0 0 1 16,37 Z" />
+
+    <!-- 播放三角 -->
+    <path
+        android:fillColor="#FF00E0B0"
+        android:pathData="M21,16 L30,21.5 L21,27 Z" />
+</vector>

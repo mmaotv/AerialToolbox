@@ -1,0 +1,12 @@
+# 统一换行：仓库内用 LF，Windows 检出按需转换
+* text=auto
+
+# 构建脚本与 shell 脚本必须保持 LF，否则 Linux/macOS 上跑不了
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+
+# 二进制
+*.apk binary
+*.jar binary
+*.png binary

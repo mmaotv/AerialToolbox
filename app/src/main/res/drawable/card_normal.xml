@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  未选中：外层铺满描边色，内层向内 inset 出边框宽度，
+  这样四周边框宽度绝对均匀，不受 stroke 绘制方式的限制。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/stroke_normal" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="1.5dp"
+        android:left="1.5dp"
+        android:right="1.5dp"
+        android:top="1.5dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/card_fill" />
+            <corners android:radius="18.5dp" />
+        </shape>
+    </item>
+</layer-list>
