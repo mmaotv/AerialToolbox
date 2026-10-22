@@ -17,5 +17,9 @@ dist/*.apk
 dist/*.sha256
 *.jks
 *.keystore
+# 例外：CleanYourTV 的固定 debug 签名必须进仓库，否则 CI 每次编出来的包签名都不同，
+# 用户升级时会被 INSTALL_FAILED_UPDATE_INCOMPATIBLE 挡下来。它只是个 debug key
+# （storepass/keypass 都是 android），公开无风险。
+!upstream/cleanyourtv/debug.keystore
 captures/
 dist/*.png
