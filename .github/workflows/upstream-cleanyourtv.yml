@@ -115,9 +115,12 @@ jobs:
           echo "$BADGING" | grep -q "package: name='com.gathin.tvhome'" \
             || { echo "包名不对"; exit 1; }
           apksigner verify --print-certs "$APK" | head -3
-          # 签名必须是仓库里那把固定 key，否则老版本覆盖不上去（会 INSTALL_FAILED_UPDATE_INCOMPATIBLE）
-          apksigner verify --print-certs "$APK" \
-            | grep -qi "BF:3F:54:3E:CC:26:F4:CE:82:4F:0E:58:AE:E9:18:24:C3:21:33:2E:73:09:08:B8:4D:1E:47:FC:6F:7C:5E:85" \
+          # 签名必须是仓库里那把固定 key，否则老版本覆盖不上去（会 INSTALL_FAILED_UPDATE_INCOMPATIBLE）。
+          # apksigner 打出来的指纹是小写、不带冒号的，先归一化再比。
+          CERT=$(apksigner verify --print-certs "$APK" \
+                 | grep -i "certificate SHA-256 digest" | tr -d ':' | tr 'A-F' 'a-f')
+          echo "cert=$CERT"
+          echo "$CERT" | grep -q "bf3f543ecc26f4ce824f0e58aee91824c321332e730908b84d1e47fc6f7c5e85" \
             || { echo "签名不是 upstream/cleanyourtv/debug.keystore，检查 patch.py 有没有生效"; exit 1; }
 
       - name: 发布 cyt-v 发行版
