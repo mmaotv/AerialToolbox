@@ -5,6 +5,8 @@
 *.sh text eol=lf
 gradlew text eol=lf
 *.bat text eol=crlf
+# CI 的 workflow 在 Linux runner 上跑，CRLF 也能用，但保持 LF 更省事
+*.yml text eol=lf
 
 # 二进制
 *.apk binary

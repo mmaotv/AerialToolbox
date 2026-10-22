@@ -7,14 +7,19 @@
 界面、图标与字体都按 Aerial 自己的设计语言做（同一个品牌渐变、同一套 tvOS 配色、同一份 Inter 字体），
 在电视应用列表里它和 Aerial 是同一个体系的东西。
 
-![界面](docs/screenshot-main.png)
+<p align="center">
+  <img src="docs/screenshot-main.png" alt="Aerial 工具箱主界面" width="880">
+</p>
 
-<sub>上图是按布局 dp 数值还原的版式示意图（`tools/make_preview.py`），不是运行截图。</sub>
+<p align="center">
+  <sub>主界面示意图：一屏放下安装、更新、修复、验收与各开关。图为按布局 dp 数值 1:1 还原的版式示意（<code>tools/make_preview.py</code>），不是运行截图。</sub>
+</p>
 
 <p align="left">
 <img alt="minSdk" src="https://img.shields.io/badge/minSdk-21-brightgreen">
 <img alt="Android TV" src="https://img.shields.io/badge/Android%20TV-leanback-blue">
 <img alt="license" src="https://img.shields.io/badge/license-MIT-orange">
+<a href="../../actions/workflows/android.yml"><img alt="build" src="https://github.com/mmaotv/AerialToolbox/actions/workflows/android.yml/badge.svg"></a>
 </p>
 
 ## 它解决什么问题
@@ -44,6 +49,25 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 | **ADB 常开** | 小米等设备待机后 ADB 被关闭时自动打开 |
 | **屏保接管** | 把系统屏保换成 Aerial 的航拍屏保（仅使用系统屏保的电视，如 TCL） |
 | **还原 / 卸载** | 逐条撤销授权与设置，可只还原，也可连 Aerial 一起卸载 |
+
+## 界面与样式
+
+界面按 Aerial 自己的设计语言做，而不是随便套一个 Material 主题：纯黑背景、半透明 `Fill` 面板、
+1px `Hairline` 描边，遥控器移到哪张卡片，哪张就整块反白（`#F5F5F7` 底 + `#1D1D1F` 字），
+和 Aerial 里被选中的影片条目是同一种反馈。字形用 Aerial 同一份 Inter 可变字体。
+
+顶栏常显调试通道状态，下面三块分别是设备、桌面状态、内置离线包版本；
+所有操作逐行打到最下方的日志行，进度与确认用居中浮层，不跳页、不遮挡卡片。
+
+<p align="center">
+  <img src="docs/banner.png" alt="Android TV banner" width="320">
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/icon.png" alt="应用图标" width="120">
+</p>
+
+<p align="center">
+  <sub>图标与电视 banner 用同一份拱弧曲线、同一组品牌渐变（<code>#2FD0A5 → #5B5BF0</code>），与 Aerial 摆在应用列表里是同一个体系。</sub>
+</p>
 
 ## 两条路径：安装离线，更新在线
 
@@ -103,6 +127,9 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 ## 目录结构
 
 ```
+.github/workflows/android.yml   CI：assembleRelease + artifact
+docs/                           README 用的示意图（截图 / banner / 图标）
+tools/                          图标与示意图生成脚本
 app/src/main/
 ├── assets/bundled/            内置离线包（官方 Release 的 standard / guard 两个 APK）
 │   └── meta.properties        内置包版本号与日期
@@ -144,6 +171,10 @@ app/src/main/
 
 未配置签名时使用本机调试密钥，产出可直接安装的包。正式发布请换成自己的 keystore。
 
+不想装环境也可以用 CI：[`.github/workflows/android.yml`](.github/workflows/android.yml) 在每次
+push / PR 上跑 `assembleRelease`，把 `AerialToolbox-<version>.apk` 与 sha256 作为 artifact 传上去，
+在 Actions 页面直接下载。它只负责「能编译出包」，不签名发布，也不碰 Release。
+
 ## 更新内置离线包
 
 内置包决定「离线安装」的版本，当前内置的是 **v1.30（2026-10-22）**。升级步骤如下：
@@ -165,8 +196,11 @@ app/src/main/
 python tools/make_icons.py
 ```
 
-脚本会按 `docs/brand/icon.svg` 的同一条拱弧曲线、同一组渐变，生成 mdpi~xxxhdpi
+脚本会按上游 `aerial-tv/docs/brand/icon.svg` 的同一条拱弧曲线、同一组渐变，生成 mdpi~xxxhdpi
 五档图标、自适应图标前景与电视 banner。要改形状就改脚本里的 `ARC` / `BASE` 坐标。
+
+主界面示意图同样由脚本生成（`tools/make_preview.py`，输出 `docs/screenshot-main.png`），
+尺寸按 `activity_main.xml` 的 dp 数值换算，所以改了布局记得同步重跑。
 
 ## 免责声明
 
