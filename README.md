@@ -155,6 +155,17 @@ app/src/main/
 版本号别偷懒：工具箱按 `meta.properties` 的版本给安装包命名，版本对不上会出现
 「本机比内置包新」的降级提示（工具会自动 `pm install -r -d` 放行，但会先提醒你）。
 
+## 重新生成图标
+
+图标与 banner 是按上游图形参数用脚本画出来的，需要 Pillow 与 numpy：
+
+```bash
+python tools/make_icons.py
+```
+
+脚本会按 `docs/brand/icon.svg` 的同一条拱弧曲线、同一组渐变，生成 mdpi~xxxhdpi
+五档图标、自适应图标前景与电视 banner。要改形状就改脚本里的 `ARC` / `BASE` 坐标。
+
 ## 免责声明
 
 本工具会修改系统设置（默认桌面、无障碍服务、屏保、部分厂商属性），这些改动都可以通过
