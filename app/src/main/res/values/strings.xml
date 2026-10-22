@@ -33,4 +33,16 @@
     <string name="btn_download_install">下载并安装</string>
     <string name="btn_reinstall_bundled">用内置包重装</string>
     <string name="btn_know">知道了</string>
+
+    <!-- 关于页：工具箱自己的版本与更新 -->
+    <string name="about_title">关于</string>
+    <string name="about_subtitle">工具箱自身的版本与更新日志</string>
+    <string name="info_toolbox">工具箱版本</string>
+    <string name="info_channel">调试通道</string>
+    <string name="about_checking">正在检查工具箱最新版…</string>
+    <string name="about_log_current">本版本更新日志</string>
+    <string name="btn_check_toolbox">重新检查</string>
+    <string name="btn_update_toolbox">检查更新</string>
+    <string name="btn_latest_toolbox">已是最新版</string>
+    <string name="btn_install_now">立即安装</string>
 </resources>

@@ -49,6 +49,7 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 | **ADB 常开** | 小米等设备待机后 ADB 被关闭时自动打开 |
 | **屏保接管** | 把系统屏保换成 Aerial 的航拍屏保（仅使用系统屏保的电视，如 TCL） |
 | **还原 / 卸载** | 逐条撤销授权与设置，可只还原，也可连 Aerial 一起卸载 |
+| **关于 / 更新工具箱** | 本工具的版本与本版本更新日志；查自己的 Release 并就地自更新 |
 
 ## 界面与样式
 
@@ -87,6 +88,26 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 ```
 
 「桌面更新」页打开时会自动检查一次，之后不主动联网。断网设备可以一直只用内置包。
+
+## 工具箱自己怎么升级
+
+桌面和工具是两条互不影响的更新线：
+
+| | 更新对象 | 入口 | 装完还要接管吗 |
+|---|---|---|---|
+| 桌面 | Aerial（`app.orchard.tv`） | 主界面「桌面更新」 | 要：授权 + 主页键 + 屏保 |
+| 工具箱 | 本工具自己 | 主界面「关于 / 更新工具箱」 | 不用，装上即完成 |
+
+「关于」页进来先摆**本版本的更新日志**（随 APK 一起发布，离线可看），随后自动查一次本仓库的
+最新 Release：查到新版就把日志区换成线上版本的说明，按钮变成「升级到 x.y.z」，点了才开始下载。
+按钮文案与版本号都是从包管理器里读的，不会出现「界面写 1.3.0、实际装的是别的」这种事。
+
+自更新走 ADB `pm install -r`，**安装的一瞬间系统会关掉工具箱**（等价于换包重启），属正常现象，
+所以下载完会先弹确认框讲清楚；ADB 不可用时退回系统安装器。桌面那边的接管状态完全不受影响。
+
+> 签名提醒：自更新要求新旧包用同一把密钥签。Release 里的包与本地构建用的是本机调试密钥；
+> CI artifact 用的是 runner 的调试密钥，用 CI 包自更新会报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`，
+> 需要先卸载再装。（装的是 Release 包就不会遇到。）
 
 ## 工作原理
 
@@ -141,11 +162,15 @@ app/src/main/
 │   │   ├── AerialSpec.kt      包名、组件、指令模板（对齐上游 tools/install.sh）
 │   │   ├── AerialRunner.kt    安装 / 修复 / 验收 / 还原
 │   │   ├── BundledRelease.kt  释放内置离线包
-│   │   ├── ReleaseChecker.kt  GitHub Release 查询、镜像兜底、下载
+│   │   ├── ReleaseChecker.kt  Aerial 的 Release 查询、镜像兜底、下载
+│   │   ├── ToolboxUpdater.kt  本仓库的 Release 查询（工具箱自更新）
+│   │   ├── ToolboxInfo.kt     工具箱自己的版本号与本版本更新日志
+│   │   ├── Changelog.kt       Release 正文（markdown）的轻量清洗，两页共用
 │   │   └── AdbSession.kt      全局唯一调试通道
 │   ├── Ui.kt                  字体与状态胶囊（Inter 字重、焦点反白）
-│   ├── MainActivity.kt        主界面（安装、接管、开关、还原）
-│   └── UpdateActivity.kt      桌面更新页（查版本、看日志、下载安装）
+│   ├── MainActivity.kt        主界面（安装、接管、开关、还原、关于入口）
+│   ├── UpdateActivity.kt      桌面更新页（查版本、看日志、下载安装）
+│   └── AboutActivity.kt       关于页（本工具版本、更新日志、自更新）
 └── res/
     ├── layout/                TV 版 XML 布局（遥控器焦点）
     ├── color/                 焦点态文字色 selector（跟随卡片焦点）
@@ -183,7 +208,8 @@ push / PR 上跑 `assembleRelease`，把 `AerialToolbox-<version>.apk` 与 sha25
    `aerial-standard.apk` 与 `aerial-guard.apk`，覆盖 `app/src/main/assets/bundled/`。
 2. 改 `app/src/main/assets/bundled/meta.properties` 里的 `version` / `tag` / `publishedAt` / `versionCode`。
 3. 改 `app/build.gradle.kts` 里工具箱自己的 `versionCode` / `versionName`。
-4. 重新构建。Gradle 已配置 `noCompress += "apk"`，内置包原样入库。
+4. 在 `core/ToolboxInfo.kt` 的 `CHANGELOG` 里补一段本版本说明，「关于」页会直接显示它。
+5. 重新构建。Gradle 已配置 `noCompress += "apk"`，内置包原样入库。
 
 版本号别偷懒：工具箱按 `meta.properties` 的版本给安装包命名，版本对不上会出现
 「本机比内置包新」的降级提示（工具会自动 `pm install -r -d` 放行，但会先提醒你）。
@@ -201,6 +227,28 @@ python tools/make_icons.py
 
 主界面示意图同样由脚本生成（`tools/make_preview.py`，输出 `docs/screenshot-main.png`），
 尺寸按 `activity_main.xml` 的 dp 数值换算，所以改了布局记得同步重跑。
+
+## 更新日志
+
+### v1.3.0（2026-10-22）
+
+- 新增「关于 / 更新工具箱」页（主界面右下角，「还原 / 卸载」右边）：本工具版本、内置桌面版本、
+  调试通道状态，以及随包发布的本版本更新日志
+- 工具箱可以自己升级自己：查本仓库最新 Release → 展示该版本更新日志 → 下载 →
+  ADB `pm install -r`，装完重启；ADB 不可用时交给系统安装器
+- 平台版本与更新日志都从包管理器 / `ToolboxInfo.CHANGELOG` 读，界面不会再和安装包对不上
+- 主界面宫格补满 9 格（三行三列）；桌面安装、修复、验收、还原的行为没有变化
+
+### v1.2.0（2026-10-22）
+
+- 配色、字号、Inter 字体、图标与 TV banner 全部对齐 Aerial 桌面
+- 内置离线包升到 Aerial v1.30（2026-10-22）
+- 卡片改为三列，说明文案压到单行
+
+### v1.1.0
+
+- 内置离线包：一键安装不再依赖网络
+- 独立的「桌面更新」页：查 GitHub Release、看日志、下载后安装
 
 ## 免责声明
 

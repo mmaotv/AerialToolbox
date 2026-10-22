@@ -20,6 +20,7 @@ import com.miaomiaotv.aerial.core.AerialSettings
 import com.miaomiaotv.aerial.core.AerialSpec
 import com.miaomiaotv.aerial.core.ApkStore
 import com.miaomiaotv.aerial.core.BundledRelease
+import com.miaomiaotv.aerial.core.Changelog
 import com.miaomiaotv.aerial.core.RemoteRelease
 import com.miaomiaotv.aerial.core.ReleaseChecker
 import com.miaomiaotv.aerial.core.VersionCompare
@@ -440,32 +441,11 @@ class UpdateActivity : Activity() {
         Log.i(TAG, line)
     }
 
-    /** Release 正文是 markdown，电视上没条件渲染，做一次轻量清洗 */
-    private fun prettyChangelog(release: RemoteRelease): String {
-        val body = release.changelog.trim()
-        if (body.isBlank()) {
-            return "该版本没有附带更新说明。\n\n可在发布页查看：${release.pageUrl}"
-        }
-        var inCodeBlock = false
-        val cleaned = body.lines().mapNotNull { raw ->
-            var line = raw.trim()
-            // 代码块（安装命令）在电视上没有意义，整块丢掉
-            if (line.startsWith("```")) {
-                inCodeBlock = !inCodeBlock
-                return@mapNotNull null
-            }
-            if (inCodeBlock) return@mapNotNull null
-            line = line.replace(Regex("^#{1,6}\\s*"), "")
-            line = line.replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")
-            line = line.replace(Regex("__(.+?)__"), "$1")
-            line = line.replace(Regex("`([^`]+)`"), "$1")
-            line = line.replace(Regex("!?\\[([^\\]]*)]\\([^)]*\\)"), "$1")
-            line = line.replace(Regex("^[-*+]\\s+"), "· ")
-            line = line.replace(Regex("^>\\s*"), "")
-            if (line == "---" || line == "***") "" else line
-        }.joinToString("\n").replace(Regex("\n{3,}"), "\n\n").trim()
-        return cleaned.ifBlank { "该版本没有附带更新说明。" }
-    }
+    /** Release 正文是 markdown，电视上没条件渲染，交给 [Changelog] 统一清洗 */
+    private fun prettyChangelog(release: RemoteRelease): String = Changelog.pretty(
+        release.changelog,
+        "该版本没有附带更新说明。\n\n可在发布页查看：${release.pageUrl}"
+    )
 
     private companion object {
         const val TAG = "AerialUpdate"

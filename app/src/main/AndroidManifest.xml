@@ -49,6 +49,14 @@
             android:launchMode="singleTop"
             android:screenOrientation="landscape" />
 
+        <!-- 关于页：工具箱自己的版本、更新日志与自更新。
+             exported 同为 true：装完新版会被系统重启，拉起本页能直接看到结果。 -->
+        <activity
+            android:name=".AboutActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape" />
+
         <!-- 只读地把缓存里的安装包交给系统安装器，不导出 -->
         <provider
             android:name=".apk.ApkProvider"

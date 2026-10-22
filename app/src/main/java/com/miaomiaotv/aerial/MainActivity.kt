@@ -26,6 +26,7 @@ import com.miaomiaotv.aerial.core.AerialSpec
 import com.miaomiaotv.aerial.core.ApkStore
 import com.miaomiaotv.aerial.core.BundledRelease
 import com.miaomiaotv.aerial.core.ReleaseChecker
+import com.miaomiaotv.aerial.core.ToolboxInfo
 import com.miaomiaotv.aerial.core.VersionCompare
 import java.io.File
 import java.util.Locale
@@ -240,6 +241,12 @@ class MainActivity : Activity() {
         startActivity(Intent(this, UpdateActivity::class.java))
     }
 
+    /** 打开「关于」页：工具箱自己的版本、更新日志与自更新 */
+    private fun openAboutPage() {
+        if (busy) return
+        startActivity(Intent(this, AboutActivity::class.java))
+    }
+
     // ===================== 操作卡片 =====================
 
     private data class Action(
@@ -262,6 +269,7 @@ class MainActivity : Activity() {
         val connected = channel != null && runner != null
         val installed = installedVersion
         val bundledVersion = bundled.info().version
+        val toolboxVersion = ToolboxInfo.versionName(this)
         // 本机已经在线升级过时，再用内置包装就是降级，提前说清楚
         val installedIsNewer = installed != null && bundledVersion.isNotBlank() &&
             VersionCompare.compare(installed, bundledVersion) > 0
@@ -311,7 +319,13 @@ class MainActivity : Activity() {
                 title = "还原 / 卸载",
                 subtitle = "撤销接管，可一并卸载",
                 enabled = connected && installed != null && !busy
-            ) { showRestoreConfirm() }
+            ) { showRestoreConfirm() },
+            // 第 9 张卡片：落在最后一行最右（还原 / 卸载右边、ADB 常开下面）
+            Action(
+                title = "关于 / 更新工具箱",
+                subtitle = "v$toolboxVersion · 自更新与版本日志",
+                enabled = !busy
+            ) { openAboutPage() }
         )
 
         val inflater = LayoutInflater.from(this)
