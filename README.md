@@ -13,11 +13,20 @@
 在电视应用列表里它和 Aerial 是同一个体系的东西。
 
 <p align="center">
-  <img src="docs/screenshot-main.png" alt="Aerial 工具箱主界面" width="880">
+  <img src="docs/screenshot-main.png" alt="桌面工具箱主界面 · Aerial" width="880">
 </p>
 
 <p align="center">
-  <sub>主界面示意图：一屏放下安装、更新、修复、验收与各开关。图为按布局 dp 数值 1:1 还原的版式示意（<code>tools/make_preview.py</code>），不是运行截图。</sub>
+  <sub>Aerial 模式：一屏放下安装、更新、修复、验收与各开关。</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshot-cleantv.png" alt="桌面工具箱主界面 · CleanYourTV" width="880">
+</p>
+
+<p align="center">
+  <sub>CleanYourTV 模式：同一套布局，宫格换成遥控器按键与 Home 键兼容。
+  两张都是按 <code>activity_main.xml</code> 的 dp 数值 1:1 还原的版式示意（<code>tools/make_preview.py</code>），不是运行截图。</sub>
 </p>
 
 <p align="left">
@@ -255,11 +264,23 @@ push / PR 上跑 `assembleRelease`，把 `AerialToolbox-<version>.apk` 与 sha25
 
 ## 更新内置离线包
 
-内置包决定「离线安装」的版本，当前内置的是 **v1.30（2026-10-22）**。升级步骤如下：
+内置包决定「离线安装」的版本，当前内置的是 Aerial **v1.30（2026-10-22）** 与 CleanYourTV **v2.6**。
+
+Aerial（从上游下现成的）：
 
 1. 从 [aerial-tv Releases](https://github.com/pengchujin/aerial-tv/releases) 下载
    `aerial-standard.apk` 与 `aerial-guard.apk`，覆盖 `app/src/main/assets/bundled/`。
 2. 改 `app/src/main/assets/bundled/meta.properties` 里的 `version` / `tag` / `publishedAt` / `versionCode`。
+
+CleanYourTV（用我们自己 CI 编出来的那个）：
+
+1. 等 `upstream-cleanyourtv.yml` 跑完，从本仓库 `cyt-v*` 发行版下载 `CleanYourTV-<ver>.apk`，
+   覆盖 `app/src/main/assets/bundled-cyt/CleanYourTV-<ver>.apk`（旧文件删掉）。
+   注意**别用上游源码自己编**：那样签名不是仓库里那把固定 key，会和已在设备上的版本冲突。
+2. 改 `app/src/main/assets/bundled-cyt/meta.properties` 里的 `version` / `tag` / `minSdk`。
+
+然后两边都要做：
+
 3. 改 `app/build.gradle.kts` 里工具箱自己的 `versionCode` / `versionName`。
 4. 在 `core/ToolboxInfo.kt` 的 `CHANGELOG` 里补一段本版本说明，「关于」页会直接显示它。
 5. 重新构建。Gradle 已配置 `noCompress += "apk"`，内置包原样入库。
@@ -278,8 +299,8 @@ python tools/make_icons.py
 脚本会按上游 `aerial-tv/docs/brand/icon.svg` 的同一条拱弧曲线、同一组渐变，生成 mdpi~xxxhdpi
 五档图标、自适应图标前景与电视 banner。要改形状就改脚本里的 `ARC` / `BASE` 坐标。
 
-主界面示意图同样由脚本生成（`tools/make_preview.py`，输出 `docs/screenshot-main.png`），
-尺寸按 `activity_main.xml` 的 dp 数值换算，所以改了布局记得同步重跑。
+主界面示意图同样由脚本生成（`tools/make_preview.py`，输出 `docs/screenshot-main.png` 与
+`docs/screenshot-cleantv.png` 两张），尺寸按 `activity_main.xml` 的 dp 数值换算，所以改了布局记得同步重跑。
 
 ## 版本号
 
@@ -328,4 +349,5 @@ python tools/make_icons.py
 ## 许可证
 
 [MIT](LICENSE)。内置的 Aerial 安装包来自 [pengchujin/aerial-tv](https://github.com/pengchujin/aerial-tv)（MIT），
-版权归原作者所有。Aerial 桌面本身与本工具无隶属关系。
+CleanYourTV 安装包由 [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv)（MIT）源码打补丁后构建，
+版权均归原作者所有。两个桌面本身与本工具无隶属关系。

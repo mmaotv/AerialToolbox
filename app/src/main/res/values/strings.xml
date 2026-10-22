@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aerial 工具箱</string>
+    <string name="app_name">桌面工具箱</string>
     <string name="app_subtitle">安装 / 接管 / 升级 电视桌面</string>
 
     <string name="connecting">正在连接本机调试通道…</string>
