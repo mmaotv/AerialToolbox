@@ -54,6 +54,7 @@ object ToolboxInfo {
         - 还原会重新启用原桌面并把主页还回去；可一并卸载 CleanYourTV
         - 内置 CleanYourTV v2.6.0 离线包（约 660 KB），装它不需要联网
         - 桌面更新页按目标分流：Aerial 查上游，CleanYourTV 查本仓库代构建的 cyt-v* 发行版
+        - 本仓库同时放两种发行版后，「查自己有没有新版」改成扫发行版列表，不会被 cyt-v* 顶掉
 
         ## v1.3.0 · 2026-10-22
 
