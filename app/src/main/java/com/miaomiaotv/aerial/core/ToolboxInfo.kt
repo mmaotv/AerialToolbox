@@ -40,6 +40,16 @@ object ToolboxInfo {
      * 会经 [Changelog.pretty] 清洗后显示在「关于」页。
      */
     val CHANGELOG: String = """
+        ## v1.3.1 · 2026-10-22
+
+        - 新增第二个上游：CleanYourTV（com.gathin.tvhome），主界面顶栏可切换 Aerial / CleanYourTV
+        - CleanYourTV 支持 Android 5.1 以上：上游原版 minSdk 是 26，我们用补丁降到 22 后自行构建
+        - 装 CleanYourTV 会先校验新桌面能否启动，再停用原桌面；主页切不过去会自动回滚
+        - 新增遥控器「输入源键」「Home 键兼容」两个开关（无障碍服务，默认关）
+        - 还原会重新启用原桌面并把主页还回去；可一并卸载 CleanYourTV
+        - 内置 CleanYourTV v2.6.0 离线包（约 660 KB），装它不需要联网
+        - 桌面更新页按目标分流：Aerial 查上游，CleanYourTV 查本仓库代构建的 cyt-v* 发行版
+
         ## v1.3.0 · 2026-10-22
 
         - 新增「关于 / 更新工具箱」页：本工具的版本信息、本版本更新日志，以及检查 GitHub 最新 Release

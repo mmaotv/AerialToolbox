@@ -1,0 +1,136 @@
+name: Build CleanYourTV
+
+# CleanYourTV 的上游只发源码、不发二进制，所以这个工作流代它构建：
+# 上游有新 tag → 打补丁（minSdk 22 + API 兼容 + 固定签名）→ 编 APK →
+# 发成本仓库的 cyt-v<tag> 发行版，工具箱再从这个发行版下载。
+#
+# 手动触发时可以指定 tag，用来补构建历史版本。
+
+on:
+  schedule:
+    # 上游发版很勤（2.5 → 2.6 之间有 186 个 PR），四小时查一次
+    - cron: "0 2,8,14,20 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "上游 tag（留空 = 最新 release）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cyt-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 解析上游版本
+        id: up
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(curl -fsSL https://api.github.com/repos/Gathin23/cleanyourtv/releases/latest \
+                  | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "上游版本：$TAG"
+
+      - name: 是否已经构建过
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "cyt-${{ steps.up.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "cyt-${{ steps.up.outputs.tag }} 已经发过，跳过"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: JDK 17
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK 组件
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+          echo "$ANDROID_HOME/build-tools/34.0.0" >> "$GITHUB_PATH"
+
+      - name: 下载上游源码
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          mkdir -p upstream-src
+          # codeload 比 git clone 稳：不需要 github.com:443 的 SSH/HTTPS 认证链路
+          curl -fsSL "https://codeload.github.com/Gathin23/cleanyourtv/tar.gz/refs/tags/${{ steps.up.outputs.tag }}" \
+            | tar xz -C upstream-src --strip-components=1
+          ls upstream-src/launcher
+
+      - name: 打兼容补丁
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          python3 upstream/cleanyourtv/patch.py "$PWD/upstream-src"
+          grep -n "minSdk" upstream-src/launcher/app/build.gradle
+
+      - name: 构建 release
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cd upstream-src/launcher
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          ./gradlew assembleRelease --no-daemon --console=plain
+
+      - name: 校验产物
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          APK=upstream-src/launcher/app/build/outputs/apk/release/app-release.apk
+          ls -l "$APK"
+          aapt2 dump badging "$APK" | head -4
+          # 补丁没生效的话这里直接失败，别把装不上的包发出去
+          aapt2 dump badging "$APK" | grep -q "minSdkVersion:'22'" \
+            || { echo "minSdk 不是 22，补丁没有生效"; exit 1; }
+          aapt2 dump badging "$APK" | grep -q "package: name='com.gathin.tvhome'" \
+            || { echo "包名不对"; exit 1; }
+          apksigner verify --print-certs "$APK" | head -3
+
+      - name: 发布 cyt-v 发行版
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="cyt-${{ steps.up.outputs.tag }}"
+          VERSION="${{ steps.up.outputs.version }}"
+          APK=upstream-src/launcher/app/build/outputs/apk/release/app-release.apk
+          OUT="CleanYourTV-$VERSION.apk"
+          cp "$APK" "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+
+          cat > notes.md <<EOF
+          由上游 [${{ steps.up.outputs.tag }}](https://github.com/Gathin23/cleanyourtv/releases/tag/${{ steps.up.outputs.tag }}) 源码构建。
+
+          **与上游原版的差别**（补丁见 \`upstream/cleanyourtv/patch.py\`）：
+
+          - \`minSdk\` 26 → **22**，因此在 Android 5.1 上也能安装运行
+          - API 23/24/26 的调用全部加了版本判断或等价替换（命令模板见补丁脚本的注释）
+          - 关闭 Fonts in XML（5.1 读不了 \`@font/\`），改用同字重的系统字体家族
+          - 打开 core library desugaring，\`java.time\` 在 5.1 上可用
+          - 签名固定为本仓库的 debug keystore，保证各版本之间可以覆盖安装
+
+          功能与上游一致：Apple TV 风格主页、dock、输入源弹层、主题、时钟屏保、遥控器按键服务。
+
+          校验：\`$OUT.sha256\`
+          EOF
+
+          gh release create "$TAG" "$OUT" "$OUT.sha256" \
+            --title "CleanYourTV $VERSION（Android 5.1+）" \
+            --notes-file notes.md

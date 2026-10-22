@@ -21,8 +21,11 @@ import com.miaomiaotv.aerial.core.AerialSpec
 import com.miaomiaotv.aerial.core.ApkStore
 import com.miaomiaotv.aerial.core.BundledRelease
 import com.miaomiaotv.aerial.core.Changelog
+import com.miaomiaotv.aerial.core.CleanTvRunner
+import com.miaomiaotv.aerial.core.CleanTvSpec
 import com.miaomiaotv.aerial.core.RemoteRelease
 import com.miaomiaotv.aerial.core.ReleaseChecker
+import com.miaomiaotv.aerial.core.Target
 import com.miaomiaotv.aerial.core.VersionCompare
 import java.io.File
 import java.util.Locale
@@ -40,6 +43,9 @@ class UpdateActivity : Activity() {
 
     private lateinit var settings: AerialSettings
     private lateinit var bundled: BundledRelease
+
+    /** 更新哪个桌面：Aerial（查上游）或 CleanYourTV（查本仓库代构建包） */
+    private lateinit var target: Target
 
     private lateinit var statusText: TextView
     private lateinit var bundledText: TextView
@@ -70,7 +76,8 @@ class UpdateActivity : Activity() {
         Ui.apply(window.decorView)
 
         settings = AerialSettings(this)
-        bundled = BundledRelease(this)
+        target = Target.of(intent.getStringExtra(EXTRA_TARGET))
+        bundled = BundledRelease(this, target.bundledDir)
 
         statusText = findViewById(R.id.tvUpdateStatus)
         bundledText = findViewById(R.id.tvBundled)
@@ -164,7 +171,16 @@ class UpdateActivity : Activity() {
         status(getString(R.string.update_checking))
 
         executor.execute {
-            val release = runCatching { ReleaseChecker.latest() }.getOrNull()
+            val release = runCatching {
+                if (target.isAerial) {
+                    ReleaseChecker.latest()
+                } else {
+                    // 上游不发二进制，只能查我们自己代构建的 release
+                    ReleaseChecker.latestFor(
+                        target.updateApi, CleanTvSpec.ASSET_PREFIX, target.releasePage, target.tagPrefix
+                    )
+                }
+            }.getOrNull()
             busy = false
             ui {
                 setBusy(false, "", 0)
@@ -234,10 +250,15 @@ class UpdateActivity : Activity() {
             return
         }
         if (busy) return
-        val guard = settings.useGuard
-        val flavor = if (guard) "guard" else "standard"
+        val guard = settings.useGuard && target.isAerial
+        val prefix = if (target.isAerial) "aerial" else "cleanyourtv"
+        val flavor = when {
+            guard -> "-guard"
+            target.isAerial -> "-standard"
+            else -> ""
+        }
         val versionTag = release.version.ifBlank { "latest" }
-        val dest = File(ApkStore.stagingDir(this), "aerial-$flavor-$versionTag.apk")
+        val dest = File(ApkStore.stagingDir(this), "$prefix$flavor-$versionTag.apk")
 
         busy = true
         setBusy(true, "准备下载…", 0)
@@ -249,10 +270,16 @@ class UpdateActivity : Activity() {
                     ui { step("已存在同版本安装包，直接安装", 50) }
                 } else {
                     ui { step("连接下载服务器…", 3) }
-                    val used = ReleaseChecker.downloadWithFallback(release.urlFor(guard), guard, dest) { read, total ->
+                    val progress: (Long, Long) -> Unit = { read, total ->
                         val percent = if (total > 0) (read * 50 / total).toInt().coerceIn(0, 50) else 20
                         val mb = read / 1024.0 / 1024.0
                         ui { step(String.format(Locale.US, "下载安装包 %.1f MB…", mb), 3 + percent) }
+                    }
+                    val used = if (target.isAerial) {
+                        ReleaseChecker.downloadWithFallback(release.urlFor(guard), guard, dest, progress)
+                    } else {
+                        ReleaseChecker.download(release.standardUrl, dest, progress)
+                        release.standardUrl
                     }
                     log("下载完成：$used → ${dest.absolutePath}")
                 }
@@ -282,7 +309,7 @@ class UpdateActivity : Activity() {
         setBusy(true, "释放内置安装包…", 2)
 
         executor.execute {
-            val apk = bundled.extract(settings.useGuard)
+            val apk = bundled.extract(settings.useGuard && target.isAerial)
             if (apk == null) {
                 finishBusy()
                 ui { showResult("没有内置包", listOf("这个版本没有把安装包打进来，请改用「下载并安装」"), ok = false) }
@@ -339,23 +366,52 @@ class UpdateActivity : Activity() {
         }
 
         ui { step("开始安装…", base) }
-        val runner = AerialRunner(
-            adb = channel,
-            onLog = { line -> log(line) },
-            onStep = { label, percent -> ui { step(label, base + percent * span / 100) } }
-        )
-        val outcome = runner.install(apk, settings.keepAdb, settings.ownScreensaver, settings.useGuard)
+        val onStep: (String, Int) -> Unit = { label, percent ->
+            ui { step(label, base + percent * span / 100) }
+        }
+        val onLog: (String) -> Unit = { line -> log(line) }
+        val finished: Boolean
+        val title: String
+        val details: MutableList<String>
+        val version: String?
+        if (target.isAerial) {
+            val runner = AerialRunner(channel, onLog, onStep)
+            val outcome = runner.install(apk, settings.keepAdb, settings.ownScreensaver, settings.useGuard)
+            version = runner.installedVersion()
+            finished = outcome.ok
+            title = outcome.title
+            details = outcome.details.toMutableList()
+        } else {
+            // 装之前先把原桌面记下来：装完它可能已被停用，就探测不到了
+            if (settings.cytStockLauncher.isBlank()) {
+                val home = runCatching {
+                    CleanTvRunner(channel, onLog, onStep).homeComponent()
+                }.getOrDefault("")
+                val pkg = home.substringBefore('/')
+                if (pkg.isNotBlank() && pkg != CleanTvSpec.PKG) settings.cytStockLauncher = pkg
+            }
+            val runner = CleanTvRunner(channel, onLog, onStep)
+            val outcome = runner.install(
+                apk,
+                settings.cytStockLauncher,
+                settings.cytInputKey,
+                settings.cytHomeKey,
+                settings.ownScreensaver
+            )
+            version = runner.installedVersion()
+            finished = outcome.ok
+            title = outcome.title
+            details = outcome.details.toMutableList()
+        }
 
-        val version = runner.installedVersion()
         AdbSession.installedVersion = version
-        // 安装过程会启动 Aerial 抢到前台，把本页再叫回来，用户才看得到结果
+        // 安装过程会把新桌面拉到前台，把本页再叫回来，用户才看得到结果
         runCatching { channel.shell("am start -n $packageName/.UpdateActivity") }
         finishBusy()
         ui {
             renderInstalled(version)
-            val details = outcome.details.toMutableList()
             if (fromBundled) details += "本次使用的是内置离线包"
-            if (!outcome.ok) {
+            if (!finished) {
                 // ADB 被固件拒绝（TCL 常见）时，再给一条系统安装器的路
                 val opened = openSystemInstaller(apk)
                 details += if (opened) {
@@ -364,7 +420,7 @@ class UpdateActivity : Activity() {
                     "手动安装：把 ${apk.name} 拷到 U 盘插电视安装"
                 }
             }
-            showResult(if (outcome.ok) "更新完成" else outcome.title, details, outcome.ok)
+            showResult(if (finished) "更新完成" else title, details, finished)
         }
     }
 
@@ -447,7 +503,10 @@ class UpdateActivity : Activity() {
         "该版本没有附带更新说明。\n\n可在发布页查看：${release.pageUrl}"
     )
 
-    private companion object {
-        const val TAG = "AerialUpdate"
+    companion object {
+        private const val TAG = "AerialUpdate"
+
+        /** 主界面传进来的目标桌面 key */
+        const val EXTRA_TARGET = "target"
     }
 }

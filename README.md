@@ -1,6 +1,11 @@
-# Aerial 工具箱
+# 桌面工具箱（AerialToolbox）
 
-给电视 / 电视盒子安装开源桌面 [Aerial](https://github.com/pengchujin/aerial-tv) 并接管主页键的一站式工具。
+给电视 / 电视盒子安装开源桌面、接管主页键的一站式工具。目前支持两个上游：
+
+| 上游 | 桌面长什么样 | 我们怎么装 |
+|---|---|---|
+| [Aerial](https://github.com/pengchujin/aerial-tv) | tvOS 风格，航拍屏保，无障碍守护 | 官方 Release 直接内置，离线可装 |
+| [CleanYourTV](https://github.com/Gathin23/cleanyourtv) | Apple TV 风格，dock + 玻璃高光，遥控器按键服务 | **上游只发源码**，由本仓库代构建并降到 Android 5.1 |
 
 **不需要电脑、不需要 root、不需要拆机** —— 把它装到电视上，剩下的它自己用电视本机的调试通道完成。
 
@@ -39,17 +44,55 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 
 ## 功能
 
+顶栏右侧可以切 **Aerial / CleanYourTV**，下面的宫格会跟着换一套语义：两个上游互斥，一次只接管一个桌面。
+切到 CleanYourTV 时，「安装通道」换成遥控器按键开关，「ADB 常开」换成「输入源键」与「Home 键兼容」。
+
 | 卡片 | 做什么 |
 |---|---|
-| **一键安装 / 升级桌面** | 用内置离线包安装 → 授权 → 接管主页键 → 屏保 → 启动并确认守护绑定 |
-| **桌面更新** | 进页面才联网查 GitHub 最新 Release，展示更新日志，用户点「下载并安装」后下载并安装 |
-| **修复接管** | 不重装，只重跑授权 + 默认桌面 + 守护（覆盖升级后守护掉线时用） |
-| **验收检查** | 4 项检查，只有「按主页键进入 Aerial」算真正通过 |
+| **一键安装 / 升级桌面** | 用内置离线包安装 → 授权 → 接管主页键 → 屏保 → 启动确认（Aerial 还要确认守护绑定） |
+| **桌面更新** | 进页面才联网：Aerial 查上游 Release，CleanYourTV 查本仓库代构建的 `cyt-v*` 发行版，展示更新日志后再下载 |
+| **修复接管** | 不重装，只重跑授权 + 默认桌面 + 守护 / 按键服务（覆盖升级后掉线时用） |
+| **验收检查** | Aerial 查 4 项、以「按主页键进入 Aerial」为准；CleanYourTV 查主页归属、原桌面状态、系统版本 |
 | **安装通道** | 标准版 ⇄ guard 版（guard 不带 HOME 声明，靠无障碍服务接管） |
 | **ADB 常开** | 小米等设备待机后 ADB 被关闭时自动打开 |
-| **屏保接管** | 把系统屏保换成 Aerial 的航拍屏保（仅使用系统屏保的电视，如 TCL） |
-| **还原 / 卸载** | 逐条撤销授权与设置，可只还原，也可连 Aerial 一起卸载 |
+| **屏保接管** | Aerial 换成航拍屏保；CleanYourTV 换成时钟屏保 |
+| **还原 / 卸载** | Aerial 撤销授权与设置；CleanYourTV **重新启用原桌面并把主页还回去**，可一并卸载 |
 | **关于 / 更新工具箱** | 本工具的版本与本版本更新日志；查自己的 Release 并就地自更新 |
+
+## 两个上游，两种安装方式
+
+### Aerial
+
+官方 Release 直接给两个 APK（`aerial-standard` / `aerial-guard`），所以「安装」走内置离线包、
+「更新」走上游 `releases/latest`，断网设备也能一直用内置包。
+
+### CleanYourTV
+
+上游 Release 的资产是**空的**，正文写着 *“no binaries: build the launcher with `launcher/build-and-install.sh`”* ——
+它只发源码，要求用户在自己电脑上用 JDK 17 + Android SDK 34 编译。电视上的一键安装没法照搬这条路，所以：
+
+1. [`.github/workflows/upstream-cleanyourtv.yml`](.github/workflows/upstream-cleanyourtv.yml) 每四小时查一次上游 tag，
+   有新版本就下 tarball、打补丁、编译、发成本仓库的 `cyt-v<tag>` 发行版；
+2. 工具箱内置一份 `assets/bundled-cyt/CleanYourTV-2.6.apk`，断网也能装；
+3. 「桌面更新」查的是**本仓库**的 `cyt-v*`（`releases/latest` 会拿到工具箱自己，所以按 tag 前缀筛）。
+
+补丁在 [`upstream/cleanyourtv/patch.py`](upstream/cleanyourtv/patch.py)，做的事：
+
+| 改动 | 原因 |
+|---|---|
+| `minSdk` 26 → **22** | 上游只支持 Android 8.0+，这里降到 5.1 |
+| API 23/24/26 调用加版本判断 | `getSystemService(Class)`、`isUserUnlocked`、`TvInputInfo#isHidden`、`forceHasOverlappingRendering`、`Bitmap.Config.HARDWARE`、`getLocales` 等在 5.1 上会抛 `NoSuchMethodError` |
+| 关掉 Fonts in XML | `@font/` 是 API 26 的资源类型，5.1 上 `TextView` 读到会抛 `Resources$NotFoundException`；改用同字重的系统字体家族 |
+| 打开 core library desugaring | `java.time` / `java.util.function` 在 API 26 才有 |
+| 换掉 `List#sort` / `removeIf` / `getOrDefault` / `Files.readAllLines` | 这些是 API 24/26 的库方法，desugar 覆盖不到 |
+| 固定签名 keystore | 上游用 `signingConfigs.debug`，而 CI runner 每次的 debug key 都不同，会导致「每个新版都装不上上一版」 |
+
+安装顺序照上游脚本严格来：查 SDK → 探测原桌面（只认 `tvlauncher` / `launcherx` / `leanbacklauncher` / `mitv.tvhome`）→
+`pm install -r` → **先启动一次并确认 `Status: ok`** → 授权 → 编译 → `pm disable-user` 原桌面 →
+`set-home-activity` → 复查 `resolve-activity`，不对就自动把原桌面还回去。
+
+> Android 7.0 以下没有 `cmd package set-home-activity`，这种情况下只能靠「只剩一个桌面」让系统接管，
+> 工具箱会提示你按一次主页键并在弹窗里选「始终」。
 
 ## 界面与样式
 
@@ -148,21 +191,31 @@ Aerial 官方安装说明要求你在电脑上敲一大串 `adb shell` 命令：
 ## 目录结构
 
 ```
-.github/workflows/android.yml   CI：assembleRelease + artifact
+.github/workflows/
+├── android.yml                CI：工具箱自身 assembleRelease + artifact
+└── upstream-cleanyourtv.yml   CI：代构建 CleanYourTV（上游 tag → 补丁 → APK → cyt-v* 发行版）
+upstream/cleanyourtv/
+├── patch.py                   把上游降到 Android 5.1 的补丁脚本（幂等，可重复跑）
+└── debug.keystore             固定签名，内置包与线上包必须同一把 key
 docs/                           README 用的示意图（截图 / banner / 图标）
 tools/                          图标与示意图生成脚本
 app/src/main/
-├── assets/bundled/            内置离线包（官方 Release 的 standard / guard 两个 APK）
+├── assets/bundled/            Aerial 内置离线包（官方 Release 的 standard / guard）
 │   └── meta.properties        内置包版本号与日期
+├── assets/bundled-cyt/        CleanYourTV 内置包（我们代构建的 Android 5.1 兼容版）
+│   └── meta.properties        版本、minSdk 与来源说明
 ├── assets/fonts/inter.ttf     Inter 可变字体（与 Aerial 同一份）
 ├── java/com/miaomiaotv/aerial/
 │   ├── adb/                   自实现的 ADB 协议与密钥（CNXN / AUTH / OPEN / WRTE）
 │   ├── apk/ApkProvider.kt     交给系统安装器的只读文件提供者
 │   ├── core/
-│   │   ├── AerialSpec.kt      包名、组件、指令模板（对齐上游 tools/install.sh）
-│   │   ├── AerialRunner.kt    安装 / 修复 / 验收 / 还原
+│   │   ├── Target.kt          目标桌面注册表（Aerial / CleanYourTV）与更新源
+│   │   ├── AerialSpec.kt      Aerial 的包名、组件、指令模板（对齐上游 install.sh）
+│   │   ├── AerialRunner.kt    Aerial 的安装 / 修复 / 验收 / 还原
+│   │   ├── CleanTvSpec.kt     CleanYourTV 的包名、组件、指令模板（对齐上游 install.sh）
+│   │   ├── CleanTvRunner.kt   CleanYourTV 的安装 / 接管 / 回滚 / 验收 / 还原
 │   │   ├── BundledRelease.kt  释放内置离线包
-│   │   ├── ReleaseChecker.kt  Aerial 的 Release 查询、镜像兜底、下载
+│   │   ├── ReleaseChecker.kt  上游 Release 查询、镜像兜底、下载（通用 latestFor）
 │   │   ├── ToolboxUpdater.kt  本仓库的 Release 查询（工具箱自更新）
 │   │   ├── ToolboxInfo.kt     工具箱自己的版本号与本版本更新日志
 │   │   ├── Changelog.kt       Release 正文（markdown）的轻量清洗，两页共用
@@ -228,7 +281,23 @@ python tools/make_icons.py
 主界面示意图同样由脚本生成（`tools/make_preview.py`，输出 `docs/screenshot-main.png`），
 尺寸按 `activity_main.xml` 的 dp 数值换算，所以改了布局记得同步重跑。
 
+## 版本号
+
+从 1.3.x 起**只加第三位**：1.3.1 → 1.3.2 → 1.3.3，`versionCode` 每次 +1。
+只有「再引入一个上游」或整体重构这种量级才动第二位。
+
 ## 更新日志
+
+### v1.3.1（2026-10-22）
+
+- 新增第二个上游 **CleanYourTV**：顶栏可切换目标桌面，宫格语义跟着换
+- **CleanYourTV 支持 Android 5.1+**：上游 `minSdk` 是 26，补丁降到 22 后由本仓库代构建
+  （补丁含 API 兼容、字体降级、core library desugaring 与固定签名）
+- 安装会先校验新桌面能否启动，再停用原桌面；主页切不过去自动回滚
+- 新增「输入源键」「Home 键兼容」两个无障碍开关（默认关）
+- 还原会重新启用原桌面并把主页还回去，可一并卸载
+- 新增 `upstream-cleanyourtv.yml`：每四小时查上游 tag，有新版本自动构建并发 `cyt-v*` 发行版
+- 关于页版本区同时显示两个上游的内置版本
 
 ### v1.3.0（2026-10-22）
 

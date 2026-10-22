@@ -110,11 +110,14 @@ class AboutActivity : Activity() {
     private fun renderLocal() {
         toolboxText.text = ToolboxInfo.display(this)
 
-        val info = bundled.info()
-        bundledText.text = when {
-            !info.available -> "未内置"
-            info.publishedAt.isNotBlank() -> "v${info.version}（${info.publishedAt}）"
-            else -> "v${info.version}"
+        // 两个上游各有一个内置包：Aerial 用官方 Release，CleanYourTV 用我们代构建的兼容版
+        val aerial = BundledRelease(this, "bundled").info()
+        val cyt = BundledRelease(this, "bundled-cyt").info()
+        bundledText.text = buildString {
+            append("Aerial ")
+            append(if (aerial.available) "v${aerial.version}" else "未内置")
+            append(" · CleanYourTV ")
+            append(if (cyt.available) "v${cyt.version}" else "未内置")
         }
 
         channelText.text = if (AdbSession.connected) "已连接" else "未连接"

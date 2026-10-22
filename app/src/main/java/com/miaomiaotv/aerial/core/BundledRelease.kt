@@ -15,7 +15,11 @@ import java.util.Properties
  * 安装包不能留在 APK 内部直接装：负责安装的系统进程读不到应用私有目录，
  * 必须先释放到公共下载目录（shell 与安装进程都能读）。
  */
-class BundledRelease(private val context: Context) {
+class BundledRelease(
+    private val context: Context,
+    /** 内置包目录：Aerial 用 bundled，CleanYourTV 用 bundled-cyt */
+    private val assetDir: String = "bundled"
+) {
 
     data class Info(
         val version: String,
@@ -36,8 +40,8 @@ class BundledRelease(private val context: Context) {
         versionCode = prefs.getProperty("versionCode").orEmpty().trim().toIntOrNull() ?: 0
     )
 
-    fun hasStandard(): Boolean = assetName(useGuard = false).isNotBlank()
-    fun hasGuard(): Boolean = assetName(useGuard = true).isNotBlank()
+    fun hasStandard(): Boolean = assetExists(useGuard = false)
+    fun hasGuard(): Boolean = assetExists(useGuard = true)
 
     /**
      * 把内置包释放到 shell 能读的目录，返回可直接安装的文件。
@@ -54,18 +58,19 @@ class BundledRelease(private val context: Context) {
             hasGuard() -> true
             else -> return null
         }
-        val name = if (actualGuard) "aerial-guard.apk" else "aerial-standard.apk"
+        val name = assetName(actualGuard)
         val version = info().version.ifBlank { "bundled" }
+        val shortName = name.removeSuffix(".apk").replace(Regex("^aerial-"), "")
         val dest = File(
             ApkStore.stagingDir(context),
-            "aerial-${if (actualGuard) "guard" else "standard"}-$version.apk"
+            "$shortName-$version.apk"
         )
         if (dest.exists() && dest.length() > MIN_APK_BYTES) return dest
 
         return runCatching {
             dest.parentFile?.mkdirs()
             val temp = File(dest.parentFile, dest.name + ".part")
-            context.assets.open("bundled/$name").use { input ->
+            context.assets.open("$assetDir/$name").use { input ->
                 temp.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
             }
             if (temp.length() <= MIN_APK_BYTES) {
@@ -81,15 +86,21 @@ class BundledRelease(private val context: Context) {
         }.getOrNull()
     }
 
-    private fun assetName(useGuard: Boolean): String = runCatching {
-        context.assets.open("bundled/${if (useGuard) "aerial-guard.apk" else "aerial-standard.apk"}").close()
-        if (useGuard) "aerial-guard.apk" else "aerial-standard.apk"
-    }.getOrDefault("")
+    /** 文件名以 meta.properties 的 standard / guard 为准，缺省退回 Aerial 的约定名 */
+    private fun assetName(useGuard: Boolean): String {
+        val configured = prefs.getProperty(if (useGuard) "guard" else "standard").orEmpty().trim()
+        if (configured.isNotBlank()) return configured
+        return if (useGuard) "aerial-guard.apk" else "aerial-standard.apk"
+    }
+
+    private fun assetExists(useGuard: Boolean): Boolean = runCatching {
+        context.assets.open("$assetDir/${assetName(useGuard)}").close()
+    }.isSuccess
 
     private fun loadMeta(): Properties {
         val properties = Properties()
         runCatching {
-            context.assets.open("bundled/meta.properties").use { properties.load(it) }
+            context.assets.open("$assetDir/meta.properties").use { properties.load(it) }
         }
         return properties
     }

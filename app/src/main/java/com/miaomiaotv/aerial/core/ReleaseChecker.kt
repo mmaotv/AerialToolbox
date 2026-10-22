@@ -1,5 +1,6 @@
 package com.miaomiaotv.aerial.core
 
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -74,6 +75,66 @@ object ReleaseChecker {
         fetchFromGitHub()?.let { return it }
         return mirrorFallback()
     }
+
+    /**
+     * 通用版本查询：给一个 GitHub Release 接口与资产名前缀，返回第一个匹配的 APK。
+     *
+     * CleanYourTV 用它查**本仓库**的 `cyt-v*`（上游不发二进制，只有我们自己代构建的包）。
+     * 这里传的是 `releases?per_page=N` 列表接口 —— 本仓库同时放着工具箱自己的发行版，
+     * `releases/latest` 会拿到工具箱而不是 CleanYourTV，所以必须按 tag 前缀筛。
+     *
+     * 不做镜像兜底：拿不到就让界面说清楚，总比装一个来路不明的包好。
+     */
+    fun latestFor(
+        api: String,
+        assetPrefix: String,
+        pageUrl: String,
+        tagPrefix: String? = null
+    ): RemoteRelease? = runCatching {
+        val body = httpGet(api).trim()
+        val json = if (body.startsWith("[")) {
+            val array = JSONArray(body)
+            var picked: JSONObject? = null
+            for (i in 0 until array.length()) {
+                val item = array.optJSONObject(i) ?: continue
+                val tag = item.optString("tag_name")
+                if (tagPrefix == null || tag.startsWith(tagPrefix)) {
+                    picked = item
+                    break
+                }
+            }
+            picked ?: return@runCatching null
+        } else {
+            JSONObject(body)
+        }
+        val tag = json.optString("tag_name")
+        val assets = json.optJSONArray("assets")
+        var apk: String? = null
+        var apkName = ""
+        if (assets != null) {
+            for (i in 0 until assets.length()) {
+                val item = assets.optJSONObject(i) ?: continue
+                val name = item.optString("name")
+                if (name.startsWith(assetPrefix) && name.endsWith(".apk")) {
+                    apk = item.optString("browser_download_url")
+                    apkName = name
+                }
+            }
+        }
+        val url = apk
+        if (url.isNullOrBlank()) return@runCatching null
+        RemoteRelease(
+            // tag 形如 cyt-v2.6.0：取最后一个 v 之后的部分
+            version = VersionCompare.normalize(if (tag.contains('v')) tag.substringAfterLast('v') else tag),
+            tag = tag,
+            standardUrl = url,
+            guardUrl = url,
+            source = "GitHub · $apkName",
+            changelog = json.optString("body"),
+            publishedAt = json.optString("published_at").take(10),
+            pageUrl = json.optString("html_url").ifBlank { pageUrl }
+        )
+    }.getOrNull()
 
     private fun fetchFromGitHub(): RemoteRelease? = runCatching {
         val body = httpGet(AerialSpec.API_LATEST)
