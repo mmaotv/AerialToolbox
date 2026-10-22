@@ -36,13 +36,18 @@ jobs:
       - name: 缓存 Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: 准备 Android SDK
-        uses: android-actions/setup-android@v3
-
-      # compileSdk 36：与本地 build.gradle.kts 保持一致，缺哪个装哪个
+      # ubuntu-latest 自带 Android SDK（ANDROID_HOME 已设好）。
+      # 不要用 android-actions/setup-android：它默认装的老 "tools" 包已经下架，会直接失败。
       - name: 安装 SDK 组件
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          set -euo pipefail
+          SDKMANAGER=$(command -v sdkmanager || true)
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -n1)"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
 
       - name: 编译 release
         run: |
