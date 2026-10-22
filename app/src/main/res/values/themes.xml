@@ -11,6 +11,19 @@
         <item name="android:colorBackground">@color/background</item>
     </style>
 
+    <!--
+      模态弹窗主题：独立窗口，自带遮罩，窗口背景必须透明（否则会把圆角卡片套进一块方黑底）。
+      用独立窗口而不是在主界面盖一层，是为了让背景彻底拿不到按键 —— TV 上必须这样。
+    -->
+    <style name="Dialog.App" parent="@android:style/Theme.DeviceDefault.Dialog.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.78</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
     <!-- 文字基座：Text.* 的公共父级（点号命名会隐式继承同名前缀） -->
     <style name="Text" />
 

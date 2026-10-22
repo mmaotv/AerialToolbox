@@ -73,7 +73,7 @@ class BundledRelease(
             context.assets.open("$assetDir/$name").use { input ->
                 temp.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
             }
-            if (temp.length() <= MIN_APK_BYTES) {
+            if (temp.length() <= MIN_APK_BYTES || !looksLikeApk(temp)) {
                 temp.delete()
                 return null
             }
@@ -97,6 +97,14 @@ class BundledRelease(
         context.assets.open("$assetDir/${assetName(useGuard)}").close()
     }.isSuccess
 
+    /** 释放出来的文件确实是 APK（ZIP 头）；只看体积会误伤小包 */
+    private fun looksLikeApk(file: File): Boolean = runCatching {
+        val head = ByteArray(4)
+        file.inputStream().use { it.read(head) }
+        head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte() &&
+            head[2] == 0x03.toByte() && head[3] == 0x04.toByte()
+    }.getOrDefault(false)
+
     private fun loadMeta(): Properties {
         val properties = Properties()
         runCatching {
@@ -106,8 +114,13 @@ class BundledRelease(
     }
 
     private companion object {
-        /** 小于这个体积一定不是完整的 APK（内置包约 2.4 MB） */
-        const val MIN_APK_BYTES = 1024L * 1024L
+        /**
+         * 小于这个体积一定不是完整的 APK。
+         *
+         * 别按 Aerial 的体积（2.4 MB+）定阈值 —— CleanYourTV 的包只有 679 KB，
+         * 卡在 1 MB 会把它当成「损坏的内置包」而回退到联网下载。真正的完整性由 ZIP 头判断。
+         */
+        const val MIN_APK_BYTES = 64L * 1024L
     }
 }
 

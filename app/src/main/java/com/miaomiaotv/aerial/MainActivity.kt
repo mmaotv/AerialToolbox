@@ -2,17 +2,21 @@ package com.miaomiaotv.aerial
 
 import android.Manifest
 import android.app.Activity
+import android.app.Dialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
 import android.widget.Button
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -55,7 +59,14 @@ class MainActivity : Activity() {
     private lateinit var actionGrid: LinearLayout
     private lateinit var retryButton: Button
 
-    private lateinit var overlay: FrameLayout
+    /**
+     * 模态弹窗。
+     *
+     * 必须是独立 Dialog 窗口，不能是主界面里盖一层 FrameLayout：
+     * 同窗口遮罩只能挡住画面，挡不住焦点，按确认键会落到背后那张卡片上
+     * （用户看到的就是「点了『我明白了』却执行了背后的动作」）。
+     */
+    private var overlayDialog: Dialog? = null
     private lateinit var blockProgress: LinearLayout
     private lateinit var blockDone: LinearLayout
     private lateinit var blockConfirm: LinearLayout
@@ -70,6 +81,24 @@ class MainActivity : Activity() {
     private lateinit var restoreOnlyButton: Button
     private lateinit var restoreUninstallButton: Button
     private lateinit var cancelButton: Button
+
+    /** 弹窗此刻是否在显示：显示期间绝不能让主界面抢焦点 */
+    private val modalShowing: Boolean get() = overlayDialog?.isShowing == true
+
+    /** 上一次真正执行动作的时间，用来吃掉遥控器的连击 */
+    private var lastActionAt = 0L
+
+    /** 上一张拿到焦点的卡片槽位（列表顺序固定，用下标就够），重建宫格后要还原回去 */
+    private var lastFocusedIndex = 0
+
+    /** 弹窗因为窗口还没准备好而重试的次数 */
+    private var modalRetries = 0
+
+    /** Activity 是否在前台（弹窗只能在前台弹） */
+    private var resumed = false
+
+    /** 前台恢复后要补弹的弹窗 */
+    private var pendingModal: (() -> Unit)? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
@@ -125,35 +154,11 @@ class MainActivity : Activity() {
         chipAerial = findViewById(R.id.chipAerial)
         chipCleanTv = findViewById(R.id.chipCleanTv)
 
-        overlay = findViewById(R.id.overlay)
-        blockProgress = findViewById(R.id.blockProgress)
-        blockDone = findViewById(R.id.blockDone)
-        blockConfirm = findViewById(R.id.blockConfirm)
-        progressBar = findViewById(R.id.progressBar)
-        percentText = findViewById(R.id.tvPercent)
-        stepText = findViewById(R.id.tvStep)
-        doneTitle = findViewById(R.id.tvDoneTitle)
-        doneDetail = findViewById(R.id.tvDoneDetail)
-        confirmTitle = findViewById(R.id.tvConfirmTitle)
-        confirmDetail = findViewById(R.id.tvConfirmDetail)
-        okButton = findViewById(R.id.btnOk)
-        restoreOnlyButton = findViewById(R.id.btnRestoreOnly)
-        restoreUninstallButton = findViewById(R.id.btnRestoreUninstall)
-        cancelButton = findViewById(R.id.btnCancel)
+        createOverlayDialog()
 
-        okButton.setOnClickListener { hideOverlay() }
-        cancelButton.setOnClickListener { hideOverlay() }
-        restoreOnlyButton.setOnClickListener {
-            hideOverlay()
-            startRestore(uninstall = false)
-        }
-        restoreUninstallButton.setOnClickListener {
-            hideOverlay()
-            startRestore(uninstall = true)
-        }
-        retryButton.setOnClickListener { connect() }
-        chipAerial.setOnClickListener { switchTarget(Target.AERIAL) }
-        chipCleanTv.setOnClickListener { switchTarget(Target.CLEAN_TV) }
+        retryButton.setOnClickListener { guarded { connect() } }
+        chipAerial.setOnClickListener { guarded { switchTarget(Target.AERIAL) } }
+        chipCleanTv.setOnClickListener { guarded { switchTarget(Target.CLEAN_TV) } }
 
         renderTargetChips()
         buildActionGrid()
@@ -163,19 +168,35 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        resumed = true
+        // 挂起的弹窗（装完桌面被挤下去那会儿）现在补上
+        pendingModal?.let { pending ->
+            pendingModal = null
+            pending()
+        }
+        // 正在装/正在弹结果的时候不要动宫格：重建会把焦点抖到第一张卡片上，
+        // 用户手里那一次按键就会落到「一键安装」上，看起来像是又从零开始装了一遍。
+        if (busy || modalShowing) return
         // 从「桌面更新」页回来时版本可能已经变了，重新读一次真实状态
         val ch = channel ?: return
         executor.execute {
             val version = targetInstalledVersion(ch)
             installedVersion = version
             AdbSession.installedVersion = version
+            // 这里是后台线程，碰控件必须回主线程（rebuildActionGrid 会 removeAllViews）
             renderInfo()
-            rebuildActionGrid()
+            ui { rebuildActionGrid() }
         }
     }
 
+    override fun onPause() {
+        resumed = false
+        super.onPause()
+    }
+
     override fun onBackPressed() {
-        if (overlay.visibility == View.VISIBLE) {
+        if (modalShowing) {
+            // 进度弹窗不可取消（busy 期间 dismiss 会被忽略），结果/确认弹窗按返回等于关闭
             hideOverlay()
             return
         }
@@ -217,7 +238,7 @@ class MainActivity : Activity() {
                 runner = r
                 AdbSession.attach(candidate, r)
                 status("调试通道已连接", STATE_OK)
-                log("已连接本机调试通道 $TARGET_HOST:$TARGET_PORT")
+                // 连接成功不再刷日志：顶栏状态胶囊已经说明了，底部只留真正有内容的操作记录
 
                 val info = r.deviceInfo()
                 deviceLabel = "${info.model} · Android ${info.sdk}"
@@ -278,12 +299,21 @@ class MainActivity : Activity() {
         target = next
         Target.select(this, next)
         bundled = BundledRelease(this, next.bundledDir)
-        installedVersion = if (channel != null) targetInstalledVersion(channel!!) else null
-        AdbSession.installedVersion = installedVersion
+        installedVersion = null
+        AdbSession.installedVersion = null
         log("目标桌面切换为 ${next.label}")
         renderTargetChips()
         renderInfo()
         buildActionGrid()
+        // 版本要走一次 ADB 查询，别放在点击回调里：切换瞬间卡主线程还容易查失败
+        val ch = channel ?: return
+        executor.execute {
+            val version = targetInstalledVersion(ch)
+            installedVersion = version
+            AdbSession.installedVersion = version
+            renderInfo()
+            ui { rebuildActionGrid() }
+        }
     }
 
     private fun renderTargetChips() {
@@ -452,6 +482,7 @@ class MainActivity : Activity() {
     }
 
     private fun rebuildActionGrid() {
+        if (isFinishing || isDestroyed) return
         val connected = channel != null && (runner != null || cytRunner != null)
         val installed = installedVersion
         val bundledVersion = bundled.info().version
@@ -467,6 +498,12 @@ class MainActivity : Activity() {
 
         val inflater = LayoutInflater.from(this)
         actionGrid.removeAllViews()
+        // 操作进行中 / 弹窗在显示：宫格里一张卡都不许拿焦点，否则按键会打到背后
+        actionGrid.descendantFocusability = if (busy || modalShowing) {
+            ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        } else {
+            ViewGroup.FOCUS_BEFORE_DESCENDANTS
+        }
         var index = 0
         while (index < actions.size) {
             val row = LinearLayout(this)
@@ -483,8 +520,10 @@ class MainActivity : Activity() {
                 card.alpha = if (action.enabled) 1f else 0.4f
                 card.isFocusable = action.enabled
                 card.isClickable = action.enabled
+                // 槽位下标：重建后靠它把焦点放回原来那张卡
+                card.tag = index
                 if (action.enabled) {
-                    card.setOnClickListener { action.onClick() }
+                    card.setOnClickListener { guarded { action.onClick() } }
                     bindFocusZoom(card)
                 }
                 row.addView(card)
@@ -499,39 +538,57 @@ class MainActivity : Activity() {
             actionGrid.addView(row)
         }
 
-        // 焦点落在第一个可用卡片上；当前焦点不在操作区里（比如刚关掉弹窗）时也要拉回来
-        var focusInside = false
-        var node: View? = currentFocus
-        while (node != null) {
-            if (node === actionGrid) {
-                focusInside = true
-                break
-            }
-            node = node.parent as? View
-        }
-        if (!focusInside) {
-            var firstFocusable: View? = null
-            for (rowIndex in 0 until actionGrid.childCount) {
-                val row = actionGrid.getChildAt(rowIndex) as? LinearLayout ?: continue
-                for (childIndex in 0 until row.childCount) {
-                    val child = row.getChildAt(childIndex)
-                    if (child.isFocusable) {
-                        firstFocusable = child
-                        break
-                    }
+        // 焦点还原：优先原来那张卡，它不可用了才退回第一张可用的。
+        // 之前这里是「永远抢第一张」，所以点完开关、或者状态刷新一下，焦点就跳到「一键安装」上了，
+        // 用户看着就像是自己点错了模块。
+        if (busy || modalShowing) return
+        if (!focusCard(lastFocusedIndex)) focusCard(0)
+    }
+
+    /** 把焦点放到第 [slot] 张卡片上；该槽位不可聚焦时返回 false */
+    private fun focusCard(slot: Int): Boolean {
+        var index = 0
+        for (rowIndex in 0 until actionGrid.childCount) {
+            val row = actionGrid.getChildAt(rowIndex) as? LinearLayout ?: continue
+            for (childIndex in 0 until row.childCount) {
+                val child = row.getChildAt(childIndex)
+                // 占位空位没有 tag，不占槽位编号
+                if (child.tag == null) continue
+                if (index == slot) {
+                    if (!child.isFocusable) return false
+                    if (currentFocus !== child) child.requestFocus()
+                    return true
                 }
-                if (firstFocusable != null) break
+                index++
             }
-            firstFocusable?.requestFocus()
         }
+        return false
     }
 
     /** 遥控器焦点放大效果，TV 上必须有明显的焦点反馈 */
     private fun bindFocusZoom(view: View) {
         view.setOnFocusChangeListener { target, hasFocus ->
+            if (hasFocus) {
+                (target.tag as? Int)?.let { lastFocusedIndex = it }
+            }
             val scale = if (hasFocus) FOCUS_SCALE else 1f
             target.animate().scaleX(scale).scaleY(scale).setDuration(140).start()
         }
+    }
+
+    /**
+     * 遥控器连击/长按会连发确认键。
+     * 关弹窗的那一下如果还能顺带打到底下的卡片，操作就会被从零再跑一遍，
+     * 所以所有「会改变状态」的入口都从这里过一道 600ms 的闸。
+     */
+    private fun guarded(block: () -> Unit) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastActionAt < ACTION_DEBOUNCE_MS) {
+            Log.i(TAG, "忽略连击：距上次动作 ${now - lastActionAt}ms")
+            return
+        }
+        lastActionAt = now
+        block()
     }
 
     // ===================== 动作：安装 =====================
@@ -556,6 +613,7 @@ class MainActivity : Activity() {
         executor.execute {
             try {
                 val guard = settings.useGuard
+                rememberHomeBeforeTakeover(ch)
 
                 updateProgress("准备安装包…", 4)
                 val bundledApk = bundled.extract(guard)
@@ -731,6 +789,7 @@ class MainActivity : Activity() {
         executor.execute {
             try {
                 if (target.isAerial) {
+                    rememberHomeBeforeTakeover(ch)
                     val report = AerialRunner(
                         adb = ch,
                         onLog = { line -> log(line) },
@@ -824,7 +883,6 @@ class MainActivity : Activity() {
             blockProgress.visibility = View.GONE
             blockDone.visibility = View.GONE
             blockConfirm.visibility = View.VISIBLE
-            overlay.visibility = View.VISIBLE
             confirmTitle.text = "还原桌面"
             confirmDetail.text = buildString {
                 if (target.isAerial) {
@@ -837,7 +895,28 @@ class MainActivity : Activity() {
                     append("「还原并卸载」会连 CleanYourTV 一起卸掉（桌面布局与主题设置一并清除）。")
                 }
             }
-            restoreOnlyButton.requestFocus()
+            showModal(cancelable = true)
+        }
+    }
+
+    /**
+     * 记下接管之前占着主页的组件。
+     *
+     * Android 8/9 上没有 role 服务，`cmd role remove-role-holder` 是空操作 ——
+     * 还原时只能靠这条记录，用 set-home-activity 把主页显式还给原来的桌面。
+     */
+    private fun rememberHomeBeforeTakeover(ch: AdbChannel) {
+        runCatching {
+            val output = ch.shell(
+                "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"
+            )
+            val component = output.lineSequence()
+                .map { it.trim() }
+                .lastOrNull { it.contains("/") }
+                .orEmpty()
+            if (component.isNotBlank() && !component.startsWith("${AerialSpec.PKG}/")) {
+                settings.aerialPrevHome = component
+            }
         }
     }
 
@@ -855,7 +934,8 @@ class MainActivity : Activity() {
                         adb = ch,
                         onLog = { line -> log(line) },
                         onStep = { label, percent -> updateProgress(label, percent) }
-                    ).restore(uninstall, settings.ownScreensaver)
+                    ).restore(uninstall, settings.ownScreensaver, settings.aerialPrevHome)
+                    if (uninstall) settings.aerialPrevHome = ""
                     installedVersion = targetInstalledVersion(ch)
                     busy = false
                     renderInfo()
@@ -956,15 +1036,107 @@ class MainActivity : Activity() {
 
     // ===================== 弹窗 =====================
 
+    /**
+     * 创建模态弹窗（独立窗口）。
+     *
+     * 这里刻意不用 `findViewById` 从 activity_main 里取控件：弹窗内容在 dialog_message.xml，
+     * 是另一个窗口的视图树。抽出来之后，主界面再怎么重建宫格都碰不到弹窗，反之亦然。
+     */
+    private fun createOverlayDialog() {
+        if (overlayDialog != null) return
+        val dialog = Dialog(this, R.style.Dialog_App)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_message)
+        dialog.setCanceledOnTouchOutside(false)
+        // 关掉之后把焦点还给宫格（还给原来那张卡），不要留一个「没有焦点」的空窗口。
+        // 必须 post 一帧：dismiss 过程中系统还会自己选一次焦点，晚一步才能盖住它
+        dialog.setOnDismissListener { handler.post { rebuildActionGrid() } }
+
+        val content = dialog.findViewById<View>(R.id.blockProgress)?.parent as? View
+        content?.let { Ui.apply(it) }
+
+        blockProgress = dialog.findViewById(R.id.blockProgress)
+        blockDone = dialog.findViewById(R.id.blockDone)
+        blockConfirm = dialog.findViewById(R.id.blockConfirm)
+        progressBar = dialog.findViewById(R.id.progressBar)
+        percentText = dialog.findViewById(R.id.tvPercent)
+        stepText = dialog.findViewById(R.id.tvStep)
+        doneTitle = dialog.findViewById(R.id.tvDoneTitle)
+        doneDetail = dialog.findViewById(R.id.tvDoneDetail)
+        confirmTitle = dialog.findViewById(R.id.tvConfirmTitle)
+        confirmDetail = dialog.findViewById(R.id.tvConfirmDetail)
+        okButton = dialog.findViewById(R.id.btnOk)
+        restoreOnlyButton = dialog.findViewById(R.id.btnRestoreOnly)
+        restoreUninstallButton = dialog.findViewById(R.id.btnRestoreUninstall)
+        cancelButton = dialog.findViewById(R.id.btnCancel)
+
+        okButton.setOnClickListener { guarded { hideOverlay() } }
+        cancelButton.setOnClickListener { guarded { hideOverlay() } }
+        restoreOnlyButton.setOnClickListener {
+            guarded {
+                hideOverlay()
+                startRestore(uninstall = false)
+            }
+        }
+        restoreUninstallButton.setOnClickListener {
+            guarded {
+                hideOverlay()
+                startRestore(uninstall = true)
+            }
+        }
+        overlayDialog = dialog
+    }
+
+    /** 弹窗统一入口：该关的关，该开的开，窗口尺寸钉死为内容大小 */
+    private fun showModal(cancelable: Boolean) {
+        val dialog = overlayDialog ?: return
+        // 装完桌面后 Aerial 会抢到前台，自己这时是「已暂停」。这时候 addView 会拿到失效的窗口令牌，
+        // 干脆先挂起，等 onResume 再弹，结果弹窗不会丢。
+        if (!resumed) {
+            pendingModal = { showModal(cancelable) }
+            return
+        }
+        pendingModal = null
+        dialog.setCancelable(cancelable)
+        if (!dialog.isShowing) {
+            val shown = runCatching { dialog.show() }.isSuccess
+            if (!shown) {
+                if (isFinishing || isDestroyed || modalRetries > MODAL_MAX_RETRIES) return
+                modalRetries++
+                handler.postDelayed({ showModal(cancelable) }, 300)
+                return
+            }
+        }
+        modalRetries = 0
+        dialog.window?.setLayout(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        // 弹窗是新窗口，焦点要显式搬进来；迟一帧再说，避免窗口还没拿到焦点时 requestFocus 落空
+        dialog.window?.decorView?.post {
+            val focus = when {
+                blockDone.visibility == View.VISIBLE -> okButton
+                blockConfirm.visibility == View.VISIBLE -> restoreOnlyButton
+                else -> null
+            }
+            if (focus != null && !focus.hasFocus()) {
+                focus.requestFocus()
+                // 极少数固件上第一次会失败（窗口尚未获得焦点），补一次
+                focus.postDelayed({ if (!focus.hasFocus()) focus.requestFocus() }, 150)
+            }
+        }
+    }
+
     private fun showProgress() {
         ui {
             blockProgress.visibility = View.VISIBLE
             blockDone.visibility = View.GONE
             blockConfirm.visibility = View.GONE
-            overlay.visibility = View.VISIBLE
             progressBar.progress = 0
             percentText.text = getString(R.string.percent_zero)
             stepText.text = getString(R.string.preparing)
+            // 进度中不可取消：这段时间的背景既不该响应按键，也不该被误关
+            showModal(cancelable = false)
         }
     }
 
@@ -982,21 +1154,22 @@ class MainActivity : Activity() {
             blockProgress.visibility = View.GONE
             blockConfirm.visibility = View.GONE
             blockDone.visibility = View.VISIBLE
-            overlay.visibility = View.VISIBLE
             doneTitle.text = title
             doneTitle.setTextColor(resources.getColor(if (ok) R.color.ok else R.color.warn))
             doneDetail.text = details.filter { it.isNotBlank() }
                 .take(12)
                 .joinToString("\n") { "· $it" }
-            okButton.requestFocus()
+            showModal(cancelable = true)
         }
         Log.i(TAG, "结果：$title ${details.joinToString(" | ")}")
     }
 
     private fun hideOverlay() {
         ui {
-            overlay.visibility = View.GONE
-            rebuildActionGrid()
+            val dialog = overlayDialog ?: return@ui
+            // 进度中不许关：关掉就看不到步骤了，而命令还在后台跑
+            if (busy && blockProgress.visibility == View.VISIBLE) return@ui
+            runCatching { dialog.dismiss() }
         }
     }
 
@@ -1073,6 +1246,12 @@ class MainActivity : Activity() {
 
         const val KEYS_DIR = "keys"
         const val FOCUS_SCALE = 1.03f
+
+        /** 遥控器连击闸门：600ms 内的第二下确认键直接丢掉 */
+        const val ACTION_DEBOUNCE_MS = 600L
+
+        /** 弹窗最多重试这么多次（每次 300ms），再不行就放弃，避免死循环 */
+        const val MODAL_MAX_RETRIES = 20
 
         /** 操作卡片列数：3 列更像 tvOS 的 app 宫格 */
         const val GRID_COLUMNS = 3

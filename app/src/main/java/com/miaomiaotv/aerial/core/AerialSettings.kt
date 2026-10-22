@@ -32,6 +32,16 @@ class AerialSettings(context: Context) {
         get() = prefs.getString(KEY_CYT_STOCK, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_CYT_STOCK, value).apply()
 
+    /**
+     * Aerial 接管之前占着主页的组件（形如 `com.oversea.aslauncher/.ui.main.MainActivity`）。
+     *
+     * Android 8/9 上没有 role 服务，`cmd role remove-role-holder` 是空操作，
+     * 还原时只能靠这个记录把主页显式还给原来的桌面。
+     */
+    var aerialPrevHome: String
+        get() = prefs.getString(KEY_AERIAL_PREV_HOME, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_AERIAL_PREV_HOME, value).apply()
+
     /** 遥控器「输入源」键交给 CleanYourTV（无障碍服务，默认关） */
     var cytInputKey: Boolean
         get() = prefs.getBoolean(KEY_CYT_INPUT_KEY, false)
@@ -47,6 +57,7 @@ class AerialSettings(context: Context) {
         const val KEY_KEEP_ADB = "keep_adb"
         const val KEY_OWN_SCREENSAVER = "own_screensaver"
         const val KEY_CYT_STOCK = "cyt_stock_launcher"
+        const val KEY_AERIAL_PREV_HOME = "aerial_prev_home"
         const val KEY_CYT_INPUT_KEY = "cyt_input_key"
         const val KEY_CYT_HOME_KEY = "cyt_home_key"
     }

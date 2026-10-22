@@ -27,9 +27,15 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
 
+        <!--
+          singleTask 很重要：装完桌面后要用本机 shell 的 am start 把自己叫回前台，
+          standard 模式下这会重开一个实例，进度/结果弹窗连同操作状态一起没了，
+          用户再按一下确认键就会从头再装一遍。
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

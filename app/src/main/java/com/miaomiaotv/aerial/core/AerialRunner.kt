@@ -77,7 +77,7 @@ class AerialRunner(
         ownScreensaver: Boolean,
         useGuard: Boolean
     ): Outcome {
-        val progress = StepProgress(6, onStep)
+        val progress = StepProgress(7, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
 
@@ -87,6 +87,22 @@ class AerialRunner(
         onLog("设备：${info.model}（Android ${info.sdk}）")
         notes += "设备：${info.model} · Android ${info.sdk}"
         if (isInstalled()) onLog("设备上已有 Aerial：${installedVersion()}")
+
+        // 1.5) 解除另一个桌面（CleanYourTV）的接管：它的按键服务会抢遥控器
+        progress.step("解除原接管")
+        // 自己可能被「装 CleanYourTV」那一步停用过，先确保自己能用
+        RivalTakeover.reenable({ sh(it) }, AerialSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
+        RivalTakeover.reenable({ sh(it) }, CleanTvSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
+        RivalTakeover.release({ sh(it) }, CleanTvSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
 
         // 2) 安装
         progress.step("安装桌面")
@@ -130,7 +146,7 @@ class AerialRunner(
 
     /** 只重跑接管相关的步骤（覆盖安装后守护掉了、按主页键又回原桌面时用） */
     fun repair(keepAdb: Boolean, ownScreensaver: Boolean, useGuard: Boolean): Outcome {
-        val progress = StepProgress(5, onStep)
+        val progress = StepProgress(6, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
 
@@ -141,6 +157,21 @@ class AerialRunner(
             return finish(progress, failures, notes)
         }
         notes += "已安装版本：${version.ifBlank { "未知" }}"
+
+        progress.step("解除原接管")
+        // 自己可能被「装 CleanYourTV」那一步停用过，先确保自己能用
+        RivalTakeover.reenable({ sh(it) }, AerialSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
+        RivalTakeover.reenable({ sh(it) }, CleanTvSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
+        RivalTakeover.release({ sh(it) }, CleanTvSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
 
         progress.step("授予运行权限")
         applyGrants()
@@ -289,12 +320,13 @@ class AerialRunner(
         if (!useGuard) {
             var applied = false
             for (command in AerialSpec.homeRoleCommands()) {
-                val output = sh(command).trim()
+                // 带上退出码：靠关键字猜「成功没成功」会翻车 ——
+                // Android 9 上 `cmd role ...` 回的是「cmd: Can't find service: role」（rc=20），
+                // 里面既没有 Error 也没有 not found，会被当成成功而跳过后面真正的 set-home-activity。
+                val output = sh("$command; echo RC:\$?").trim()
+                val code = Regex("RC:(-?\\d+)").find(output)?.groupValues?.get(1)?.toIntOrNull()
                 onLog("设置默认桌面：$command → ${output.ifBlank { "无回显" }}")
-                val failed = output.contains("Error", ignoreCase = true) ||
-                    output.contains("Unknown", ignoreCase = true) ||
-                    output.contains("not found", ignoreCase = true) ||
-                    output.contains("Exception", ignoreCase = true)
+                val failed = (code != null && code != 0) || roleCommandFailed(output)
                 if (!failed) {
                     applied = true
                     break
@@ -336,6 +368,22 @@ class AerialRunner(
         sh("settings put secure accessibility_enabled 1")
         notes += if (homeIsAerial) "桌面守护已配置" else "固件仍把主页键交给原桌面，已启用桌面守护接管"
         return notes.joinToString("；")
+    }
+
+    /**
+     * 设默认桌面的命令是否真的失败。
+     *
+     * 退出码拿不到时（个别固件的 sh 不回显）靠关键字兜底；这里必须把
+     * `cmd: Can't find service: role` 这类也算失败 —— Android 9 及以下没有 role 服务，
+     * 漏掉它就会把「服务不存在」当成「已经设好」，后面的 set-home-activity 永远不执行。
+     */
+    private fun roleCommandFailed(output: String): Boolean {
+        val text = output.trim()
+        if (text.isEmpty()) return false
+        return listOf(
+            "Error", "Unknown", "not found", "Exception", "Failure",
+            "Can't find service", "cannot find service"
+        ).any { text.contains(it, ignoreCase = true) }
     }
 
     /** 系统当前解析到的 HOME 组件；命令不存在或没解析到时返回空串 */
@@ -427,6 +475,9 @@ class AerialRunner(
      * 验收：与上游「验收（必须做）」一节一一对应。
      * 最后一条（按主页键进入 Aerial）是唯一能证明接管成功的判据。
      */
+    /** 系统当前解析到的默认桌面组件，形如 `app.orchard.tv/.MainActivity`；取不到返回空串 */
+    fun currentHome(): String = resolveHomeComponent()
+
     fun verify(): List<Check> {
         val checks = mutableListOf<Check>()
 
@@ -450,11 +501,24 @@ class AerialRunner(
             if (running > 0) "已绑定" else "未绑定（无需守护时属正常）"
         )
 
+        // 模拟主页键只是佐证：部分固件（Amlogic 一类）直接忽略注入的 KEYCODE_HOME，
+        // 按键没反应不代表接管失败。真正算数的是系统解析到的默认桌面。
+        val homeComponent = resolveHomeComponent()
+        val homeIsOurs = homeComponent.startsWith("${AerialSpec.PKG}/")
         sh("input keyevent KEYCODE_HOME")
         Thread.sleep(3000)
         val focus = focusLine()
         val inAerial = focus.contains(AerialSpec.PKG)
-        checks += Check("主页键进入 Aerial", inAerial, focus.ifBlank { "未取到当前窗口" })
+        checks += Check(
+            "主页键进入 Aerial",
+            inAerial || homeIsOurs,
+            when {
+                inAerial -> focus
+                homeIsOurs -> "默认桌面已是 Aerial（$homeComponent），本机不响应模拟主页键"
+                homeComponent.isNotBlank() -> "默认桌面是 $homeComponent"
+                else -> focus.ifBlank { "未取到当前窗口" }
+            }
+        )
 
         return checks
     }
@@ -472,7 +536,7 @@ class AerialRunner(
 
     // ===================== 还原 =====================
 
-    fun restore(uninstall: Boolean, ownScreensaver: Boolean): Outcome {
+    fun restore(uninstall: Boolean, ownScreensaver: Boolean, prevHome: String = ""): Outcome {
         val progress = StepProgress(6, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
@@ -490,7 +554,19 @@ class AerialRunner(
         notes += "授权已撤销"
 
         progress.step("取消默认桌面")
+        // role 服务是 Android 10 才有的，8/9 上这条一定是「Can't find service」，得靠下面的显式指定
         sh("cmd role remove-role-holder --user 0 android.app.role.HOME ${AerialSpec.PKG}")
+        if (prevHome.isNotBlank() && !prevHome.startsWith("${AerialSpec.PKG}/")) {
+            val out = sh("cmd package set-home-activity --user 0 $prevHome").trim()
+            onLog("归还主页：$prevHome → ${out.ifBlank { "无回显" }}")
+            notes += if (out.contains("Success")) {
+                "主页已还给 ${prevHome.substringBefore('/')}"
+            } else {
+                "主页还原失败（${out.take(60)}），请在电视上手动选择原桌面"
+            }
+        } else if (prevHome.isBlank()) {
+            notes += "没有记录原桌面，可按主页键手动选择"
+        }
         sh("am force-stop ${AerialSpec.PKG}")
         notes += "已取消默认桌面并停止 Aerial"
 

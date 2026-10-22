@@ -90,7 +90,7 @@ TARGETS = {
               ("桌面状态", "已安装 v1.30"),
               ("内置离线包", "v1.30（2026-10-22）")],
         cards=AERIAL_CARDS,
-        log=["已连接本机调试通道 127.0.0.1:5555", "线上最新版：1.30（GitHub）"],
+        log=["安装完成：1.30"],
     ),
     "cleantv": dict(
         out="screenshot-cleantv.png",
@@ -98,7 +98,7 @@ TARGETS = {
               ("桌面状态", "已安装 v2.6"),
               ("内置离线包", "v2.6（Android 5.1+）")],
         cards=CLEANTV_CARDS,
-        log=["已连接本机调试通道 127.0.0.1:5555", "线上最新版：cyt-v2.6.0（本仓库代构建）"],
+        log=["目标桌面切换为 CleanYourTV"],
     ),
 }
 

@@ -86,7 +86,7 @@ class CleanTvRunner(
         homeKey: Boolean,
         screensaver: Boolean
     ): Outcome {
-        val total = 8 + (if (screensaver) 1 else 0) + (if (inputKey) 1 else 0) + (if (homeKey) 1 else 0)
+        val total = 9 + (if (screensaver) 1 else 0) + (if (inputKey) 1 else 0) + (if (homeKey) 1 else 0)
         val progress = StepProgress(total, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
@@ -107,7 +107,18 @@ class CleanTvRunner(
             )
         }
 
-        // 2. 探测原桌面
+        // 2. 解除另一个桌面（Aerial）的接管
+        //    不撤掉它的无障碍守护，按主页键会被它的 HomeGuardService 抢回去，
+        //    CleanYourTV 一次都留不住（真机 Amlogic/Android 9 上就是这么翻车的）。
+        progress.step("解除原接管")
+        RivalTakeover.release(
+            { sh(it) }, AerialSpec.PKG, AerialSpec.REVIVAL_LISTENER, disable = true
+        )?.let {
+            notes += it
+            onLog(it)
+        }
+
+        // 3. 探测原桌面
         progress.step("探测原桌面")
         val currentHome = homeComponent()
         val currentPkg = currentHome.substringBefore('/')
@@ -254,12 +265,20 @@ class CleanTvRunner(
         homeKey: Boolean,
         screensaver: Boolean
     ): Outcome {
-        val progress = StepProgress(5, onStep)
+        val progress = StepProgress(6, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
 
         if (!isInstalled()) {
             return Outcome(false, "还没有装 CleanYourTV", listOf("先用「一键安装桌面」装上，再来修复接管"))
+        }
+
+        progress.step("解除原接管")
+        RivalTakeover.release(
+            { sh(it) }, AerialSpec.PKG, AerialSpec.REVIVAL_LISTENER, disable = true
+        )?.let {
+            notes += it
+            onLog(it)
         }
 
         progress.step("启动桌面")
@@ -364,7 +383,7 @@ class CleanTvRunner(
         checks += Check(
             "安装向导未占主页",
             !wraithOn || home.startsWith(CleanTvSpec.PKG + "/"),
-            if (!wraithOn) "未检测到 $CleanTvSpec.SETUP_WRAITH"
+            if (!wraithOn) "未检测到 ${CleanTvSpec.SETUP_WRAITH}"
             else "它还在，Google TV 上可能抢主页；如遇主页乱跳，把它加入停用清单"
         )
 
@@ -387,11 +406,19 @@ class CleanTvRunner(
     // ===================== 还原 =====================
 
     fun restore(uninstall: Boolean, stockHint: String?): Outcome {
-        val progress = StepProgress(if (uninstall) 5 else 4, onStep)
+        val progress = StepProgress(if (uninstall) 6 else 5, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
 
         val stock = stockHint.orEmpty().substringBefore('/')
+
+        // 装 CleanYourTV 时把 Aerial 停用了，还原第一步就要让它能用，
+        // 否则用户切回 Aerial 会发现「装了但打不开」
+        progress.step("恢复另一个桌面")
+        RivalTakeover.reenable({ sh(it) }, AerialSpec.PKG)?.let {
+            notes += it
+            onLog(it)
+        }
 
         progress.step("恢复原桌面")
         if (stock.isNotBlank() && isKnownStock(stock)) {
