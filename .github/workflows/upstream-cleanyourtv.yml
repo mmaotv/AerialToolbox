@@ -106,13 +106,19 @@ jobs:
         run: |
           APK=upstream-src/launcher/app/build/outputs/apk/release/app-release.apk
           ls -l "$APK"
-          aapt2 dump badging "$APK" | head -4
-          # 补丁没生效的话这里直接失败，别把装不上的包发出去
-          aapt2 dump badging "$APK" | grep -q "minSdkVersion:'22'" \
+          BADGING=$(aapt2 dump badging "$APK")
+          echo "$BADGING" | head -4
+          # 补丁没生效的话这里直接失败，别把装不上的包发出去。
+          # aapt2 打的是 sdkVersion:'22'（aapt 才叫 minSdkVersion），两种写法都认。
+          echo "$BADGING" | grep -qE "(min)?[sS]dkVersion:'22'" \
             || { echo "minSdk 不是 22，补丁没有生效"; exit 1; }
-          aapt2 dump badging "$APK" | grep -q "package: name='com.gathin.tvhome'" \
+          echo "$BADGING" | grep -q "package: name='com.gathin.tvhome'" \
             || { echo "包名不对"; exit 1; }
           apksigner verify --print-certs "$APK" | head -3
+          # 签名必须是仓库里那把固定 key，否则老版本覆盖不上去（会 INSTALL_FAILED_UPDATE_INCOMPATIBLE）
+          apksigner verify --print-certs "$APK" \
+            | grep -qi "BF:3F:54:3E:CC:26:F4:CE:82:4F:0E:58:AE:E9:18:24:C3:21:33:2E:73:09:08:B8:4D:1E:47:FC:6F:7C:5E:85" \
+            || { echo "签名不是 upstream/cleanyourtv/debug.keystore，检查 patch.py 有没有生效"; exit 1; }
 
       - name: 发布 cyt-v 发行版
         if: steps.check.outputs.exists == 'false'
