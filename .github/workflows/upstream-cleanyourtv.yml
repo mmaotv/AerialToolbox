@@ -64,8 +64,19 @@ jobs:
       - name: Android SDK 组件
         if: steps.check.outputs.exists == 'false'
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+          # runner 预装的 SDK 里 sdkmanager 不一定在 PATH 上（老 tools 包已下架，
+          # 新版在 cmdline-tools/<ver>/bin 下），两种位置都试一遍
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -n1 || true)"
+          fi
+          if [ -z "$SDKMANAGER" ]; then
+            echo "找不到 sdkmanager"; ls -R "$ANDROID_HOME" | head -40; exit 1
+          fi
+          echo "sdkmanager: $SDKMANAGER"
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           echo "$ANDROID_HOME/build-tools/34.0.0" >> "$GITHUB_PATH"
 
       - name: 下载上游源码
