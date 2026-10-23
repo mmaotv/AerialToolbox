@@ -129,23 +129,26 @@ class CleanTvRunner(
                 notes += "主页已经在 CleanYourTV 上，这次只做修复与重设"
                 if (stockLauncher.isNotBlank()) disableStock = isKnownStock(stockLauncher)
             }
-            stockLauncher.isNotBlank() && isKnownStock(stockLauncher) -> {
-                // 上次记过，且这次探测可能因为原桌面已被禁用而拿不到
-                disableStock = true
-            }
-            isKnownStock(currentPkg) -> {
-                stockLauncher = currentPkg
-                disableStock = true
-            }
-            currentPkg == "android" -> {
-                stockLauncher = ""
-                onLog("主页当前是系统的桌面选择器（没有默认桌面），本次不禁用任何系统桌面")
-                notes += "主页没有默认桌面，装好后按主页键，在弹窗里选 CleanYourTV 并点「始终」"
+            currentPkg.isBlank() || currentPkg == "android" -> {
+                // 系统没有默认桌面（落在选择器上），只保留上次的记录
+                onLog("主页当前没有默认桌面（落到了系统选择器）")
+                if (stockLauncher.isNotBlank()) {
+                    disableStock = isKnownStock(stockLauncher)
+                } else {
+                    notes += "主页没有默认桌面，装好后按主页键，在弹窗里选 CleanYourTV 并点「始终」"
+                }
             }
             else -> {
-                stockLauncher = ""
-                onLog("主页当前指向 ${currentHome.ifBlank { "未知组件" }}，不在可禁用名单里，本次不碰它")
-                notes += "原桌面未被识别，本次没有禁用任何系统应用；装好后按主页键手动选 CleanYourTV"
+                // 关键：不管认不认识这个桌面，都要记下来 —— 还原时得还给它。
+                // 「能不能停用」和「要不要归还」是两件事，老版本混为一谈：
+                // 不在白名单的桌面被清成空，还原时整段被跳过，
+                // 主页就留在一个马上要被卸载的应用上，卸载后按主页键就没反应了。
+                stockLauncher = currentPkg
+                disableStock = isKnownStock(currentPkg)
+                onLog(
+                    if (disableStock) "原桌面：$stockLauncher（安装成功后会停用）"
+                    else "原桌面：$currentHome（不在可停用名单，只记录、不停用）"
+                )
             }
         }
         onLog(if (disableStock) "原桌面：$stockLauncher（安装成功后会禁用）" else "原桌面：不禁用")
@@ -301,6 +304,9 @@ class CleanTvRunner(
                 progress.step("停用原桌面")
             }
             progress.step("设为默认桌面")
+            // 先补 HOME role：只写 set-home-activity 的话 role 还是空的，
+            // 应用一卸载系统就判成「没有默认桌面」，按主页键没反应
+            sh("cmd role add-role-holder --user 0 android.app.role.HOME ${CleanTvSpec.PKG}")
             val out = sh(CleanTvSpec.setHome())
             if (isMissingCommand(out)) notes += "本机没有 set-home-activity，请在电视上按主页键手动选择"
         } else {
@@ -334,6 +340,7 @@ class CleanTvRunner(
         sh(CleanTvSpec.enableStock(stockLauncher))
         val component = lastComponent(sh(CleanTvSpec.HOME_QUERY_MODERN)) ?: ""
         if (component.startsWith(stockLauncher)) {
+            sh("cmd role add-role-holder --user 0 android.app.role.HOME $stockLauncher")
             sh(CleanTvSpec.setStockHome(component))
         }
         return if (isDisabled(stockLauncher)) {
@@ -359,6 +366,16 @@ class CleanTvRunner(
             "主页归 CleanYourTV",
             home.startsWith(CleanTvSpec.PKG + "/"),
             home.ifBlank { "拿不到当前桌面组件" }
+        )
+
+        // isDefault=false 意味着系统其实没认定任何默认桌面 ——
+        // 平时看着能用（override 顶着），一旦卸载或重启，按主页键就会没反应
+        val hasDefault = HomeRoles.hasDefault { sh(it) }
+        checks += Check(
+            "系统承认默认桌面",
+            hasDefault,
+            if (hasDefault) "isDefault=true，按主页键直达桌面"
+            else "isDefault=false：按主页键可能弹选择框或没反应，请到「还原」重新归还一次主页"
         )
 
         val disabled = sh(CleanTvSpec.disabledPackages())
@@ -429,32 +446,18 @@ class CleanTvRunner(
             } else {
                 notes += "原桌面 $stock 已恢复启用"
             }
-        } else {
-            notes += "没有记录到原桌面，跳过启用步骤"
+        } else if (stock.isNotBlank()) {
+            // 不是被我们停用的那类桌面，本来就没禁用过，不用 enable
+            onLog("$stock 不在停用名单里，无需恢复启用")
         }
 
         progress.step("把主页还回去")
-        var restored = false
-        if (stock.isNotBlank()) {
-            // 先让系统重新解析原桌面的组件
-            val component = lastComponent(sh(CleanTvSpec.HOME_QUERY_MODERN))
-                ?: lastComponent(sh(CleanTvSpec.HOME_QUERY_LEGACY))
-            if (component != null && component.startsWith(stock)) {
-                val out = sh(CleanTvSpec.setStockHome(component))
-                if (isMissingCommand(out)) {
-                    notes += "本机没有 set-home-activity，请在电视上按主页键选择原桌面"
-                } else {
-                    restored = true
-                }
-            }
-        }
-        val home = homeComponent()
-        if (home.startsWith(CleanTvSpec.PKG + "/")) {
-            notes += "主页仍指向 CleanYourTV：请在电视上按主页键，选原桌面并点「始终」"
-        } else {
-            notes += "主页现在指向 ${home.ifBlank { "系统选择器" }}"
-        }
-        if (restored) notes += "已把默认桌面写回原桌面"
+        // 交给 HomeRoles：它会先补 HOME role 再写默认桌面，并复查 isDefault。
+        // 老版本这里只写 set-home-activity，role 一直是空的，
+        // 卸载 CleanYourTV 后系统就变成「没有默认桌面」，按主页键没反应。
+        notes += HomeRoles.giveBack(
+            { sh(it) }, { onLog(it) }, stockHint.orEmpty(), setOf(CleanTvSpec.PKG, AerialSpec.PKG)
+        )
 
         progress.step("关闭按键服务")
         sh(CleanTvSpec.disableAccessibility())

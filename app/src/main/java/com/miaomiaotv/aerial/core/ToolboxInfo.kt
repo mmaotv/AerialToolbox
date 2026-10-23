@@ -45,6 +45,24 @@ object ToolboxInfo {
      * 会经 [Changelog.pretty] 清洗后显示在「关于」页。
      */
     val CHANGELOG: String = """
+        ## v1.3.3 · 2026-10-23
+
+        - 修「卸载桌面后主页键短按失效、回不到桌面」：根因不在按键，在 HOME role。
+          `cmd package set-home-activity` 会把 HOME role 从原桌面摘掉，但不会转给新桌面，
+          也不管卸载 —— 实测 Android 14：设完 role 立刻变空，卸载后系统解析出
+          `ResolverActivity`、`isDefault=false`，等于「没有任何默认桌面」，
+          按主页键要么没反应，要么弹「打开方式」选择框
+        - 归还主页改成两步：先 `cmd role add-role-holder` 补回 role，再写 `set-home-activity`，
+          最后复查 `isDefault=true` 才算完成（旧版只做第二步，role 一直空着）
+        - 原桌面记录不再依赖白名单：以前只有 tvlauncher/leanbox 那几个「可停用」的桌面才被记录，
+          其它桌面（launcher3、aijia、手机桌面…）会被清成空，还原时整段跳过，
+          主页就留在一个马上要被卸载的应用上 —— 现在「能不能停用」和「要不要归还」分开判断
+        - 还原时记录丢失也能救：依次按「HOME role 持有者 → 系统声明的桌面候选」找回原桌面，
+          一个不行换下一个，不会把用户留在一个没有桌面的状态
+        - 「验收检查」新增「系统承认默认桌面」一项，`isDefault=false` 会直接标红
+        - 修 720p 机器上宫格文字被纵向裁掉：三行卡片按权重均分只剩 59dp，装不下两行字。
+          宫格改为按内容定高、外加可滚动，字不再被切
+
         ## v1.3.2 · 2026-10-22
 
         - 修「点了『我明白了』却执行了弹窗背后的卡片」：弹窗原来是主界面里盖的一层遮罩，

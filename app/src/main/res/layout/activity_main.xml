@@ -220,16 +220,27 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- 操作卡片区：3 列，代码里动态填充 -->
-        <LinearLayout
-            android:id="@+id/actionGrid"
+        <!-- 操作卡片区：3 列，代码里动态填充。
+             720p 的机器（高度只有 360dp）放不下三行两行文字，
+             硬按 weight 均分会把文字裁掉，所以这里允许滚动、行高由内容决定 -->
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="8dp"
             android:layout_weight="1"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:orientation="vertical" />
+            android:clipChildren="true"
+            android:clipToPadding="true"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/actionGrid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical" />
+        </ScrollView>
 
         <TextView
             android:id="@+id/tvLog"

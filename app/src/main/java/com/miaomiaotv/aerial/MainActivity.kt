@@ -508,8 +508,10 @@ class MainActivity : Activity() {
         while (index < actions.size) {
             val row = LinearLayout(this)
             row.orientation = LinearLayout.HORIZONTAL
+            // 高度交给内容决定：小屏（720p）三行按 weight 均分会把卡片里的两行字裁掉，
+            // 外面套了 ScrollView，装不下就能滚
             row.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
             )
             for (column in 0 until GRID_COLUMNS) {
                 val action = actions.getOrNull(index) ?: break

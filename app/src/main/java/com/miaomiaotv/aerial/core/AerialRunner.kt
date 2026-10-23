@@ -520,6 +520,15 @@ class AerialRunner(
             }
         )
 
+        // 系统有没有真正认定一个默认桌面。false 时平时可能还能用，
+        // 但卸载或重启后主页键会失效 —— 必须单独报出来
+        val hasDefault = HomeRoles.hasDefault { sh(it) }
+        checks += Check(
+            "系统承认默认桌面",
+            hasDefault,
+            if (hasDefault) "isDefault=true" else "isDefault=false：主页键可能无反应，请到「还原」重新归还一次主页"
+        )
+
         return checks
     }
 
@@ -537,7 +546,7 @@ class AerialRunner(
     // ===================== 还原 =====================
 
     fun restore(uninstall: Boolean, ownScreensaver: Boolean, prevHome: String = ""): Outcome {
-        val progress = StepProgress(6, onStep)
+        val progress = StepProgress(7, onStep)
         val notes = mutableListOf<String>()
         val failures = mutableListOf<String>()
 
@@ -554,21 +563,18 @@ class AerialRunner(
         notes += "授权已撤销"
 
         progress.step("取消默认桌面")
-        // role 服务是 Android 10 才有的，8/9 上这条一定是「Can't find service」，得靠下面的显式指定
+        // role 服务是 Android 10 才有的，8/9 上这条一定是「Can't find service」，交给下面统一兜底
         sh("cmd role remove-role-holder --user 0 android.app.role.HOME ${AerialSpec.PKG}")
-        if (prevHome.isNotBlank() && !prevHome.startsWith("${AerialSpec.PKG}/")) {
-            val out = sh("cmd package set-home-activity --user 0 $prevHome").trim()
-            onLog("归还主页：$prevHome → ${out.ifBlank { "无回显" }}")
-            notes += if (out.contains("Success")) {
-                "主页已还给 ${prevHome.substringBefore('/')}"
-            } else {
-                "主页还原失败（${out.take(60)}），请在电视上手动选择原桌面"
-            }
-        } else if (prevHome.isBlank()) {
-            notes += "没有记录原桌面，可按主页键手动选择"
-        }
         sh("am force-stop ${AerialSpec.PKG}")
-        notes += "已取消默认桌面并停止 Aerial"
+        notes += "已放弃 Aerial 的默认桌面并停止它"
+
+        progress.step("归还默认桌面")
+        // 只写 set-home-activity 是不够的：那一步只改「默认桌面」，
+        // HOME role 会一直空着（卸载后被系统判成「没有默认桌面」，
+        // 按主页键要么没反应要么弹选择框）。HomeRoles 会把 role 一起补回去并复查。
+        notes += HomeRoles.giveBack(
+            { sh(it) }, { onLog(it) }, prevHome, setOf(AerialSpec.PKG)
+        )
 
         progress.step("还原屏保")
         notes += restoreScreensaver(ownScreensaver)
