@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import java.io.File
+import com.miaomiaotv.aerial.core.Ui
 
 /** 截取电视屏幕：通过 exec: 通道拿原始 PNG 字节（避免 pty 换行转换损坏图片）。 */
 class ScreenshotActivity : Activity() {
@@ -30,7 +31,11 @@ class ScreenshotActivity : Activity() {
         tvStatus = findViewById(R.id.tv_status)
         img = findViewById(R.id.img_capture)
 
+        findViewById<Button>(R.id.btn_close).setOnClickListener { finish() }
         btnCapture.setOnClickListener { capture() }
+
+        // 与 TV 端同一份 Inter 字体
+        Ui.apply(window.decorView)
     }
 
     private fun capture() {

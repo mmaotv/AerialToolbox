@@ -1,37 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  连接页：与 TV 端同一套视觉语言——纯黑底 + 品牌辉光、品牌标 + 大标题、
+  Fill 面板、品牌渐变主按钮、按压反白。
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
+    android:background="@drawable/bg_app"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textColor="@color/accent"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/connect_subtitle"
-            android:textColor="@color/text_dim"
-            android:textSize="13sp" />
-
+        <!-- 品牌标 + 标题 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_mark">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_mark" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    style="@style/Text.LargeTitle" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="@string/connect_subtitle"
+                    style="@style/Text.Caption" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 连接参数面板 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_panel"
             android:orientation="vertical"
             android:padding="16dp">
 
@@ -39,66 +73,61 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/label_ip"
-                android:textColor="@color/text_dim"
-                android:textSize="12sp" />
+                style="@style/Text.Caption" />
 
             <EditText
                 android:id="@+id/et_ip"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="46dp"
                 android:layout_marginTop="6dp"
-                android:background="@drawable/bg_button_dim"
+                android:background="@drawable/bg_input"
                 android:hint="@string/tip_ip_example"
                 android:inputType="text"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
-                android:textColor="@color/text"
-                android:textColorHint="@color/text_dim"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_tertiary"
                 android:textSize="15sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="14dp"
                 android:text="@string/label_port"
-                android:textColor="@color/text_dim"
-                android:textSize="12sp" />
+                style="@style/Text.Caption" />
 
             <EditText
                 android:id="@+id/et_port"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="46dp"
                 android:layout_marginTop="6dp"
-                android:background="@drawable/bg_button_dim"
+                android:background="@drawable/bg_input"
                 android:hint="5555"
                 android:inputType="number"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:text="5555"
-                android:textColor="@color/text"
-                android:textColorHint="@color/text_dim"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_tertiary"
                 android:textSize="15sp" />
 
             <Button
                 android:id="@+id/btn_connect"
+                style="@style/Btn.Primary"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/bg_button"
                 android:text="@string/btn_connect"
-                android:textColor="@color/accent_ink"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textSize="16sp" />
         </LinearLayout>
 
         <Button
             android:id="@+id/btn_scan"
+            style="@style/Btn.Ghost"
             android:layout_width="match_parent"
             android:layout_height="46dp"
             android:layout_marginTop="12dp"
-            android:background="@drawable/bg_button_dim"
             android:text="@string/btn_scan"
-            android:textColor="@color/text"
             android:textSize="15sp" />
 
         <ProgressBar
@@ -116,43 +145,38 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:text="@string/status_disconnected"
-            android:textColor="@color/text_dim"
-            android:textSize="13sp" />
+            style="@style/Text.Callout" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="20dp"
             android:text="@string/saved_devices"
-            android:textColor="@color/text"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            style="@style/Text.Title" />
 
         <ListView
             android:id="@+id/lv_saved"
             android:layout_width="match_parent"
             android:layout_height="160dp"
             android:layout_marginTop="8dp"
-            android:background="@drawable/bg_card"
-            android:divider="@color/line"
+            android:background="@drawable/bg_panel"
+            android:divider="@color/hairline"
             android:dividerHeight="1dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="20dp"
             android:text="@string/found_devices"
-            android:textColor="@color/text"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            style="@style/Text.Title" />
 
         <ListView
             android:id="@+id/lv_found"
             android:layout_width="match_parent"
             android:layout_height="160dp"
             android:layout_marginTop="8dp"
-            android:background="@drawable/bg_card"
-            android:divider="@color/line"
+            android:background="@drawable/bg_panel"
+            android:divider="@color/hairline"
             android:dividerHeight="1dp" />
 
         <TextView
@@ -161,8 +185,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/no_devices"
-            android:textColor="@color/text_dim"
-            android:textSize="12sp"
-            android:visibility="gone" />
+            android:visibility="gone"
+            style="@style/Text.Caption" />
     </LinearLayout>
 </ScrollView>

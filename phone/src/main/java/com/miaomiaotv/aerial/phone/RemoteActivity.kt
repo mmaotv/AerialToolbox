@@ -6,6 +6,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import com.miaomiaotv.aerial.core.Ui
 
 /** 手机当遥控器：把按键通过电视的 adb shell 发出去。 */
 class RemoteActivity : Activity() {
@@ -35,9 +36,15 @@ class RemoteActivity : Activity() {
         setContentView(R.layout.activity_remote)
         tvSent = findViewById(R.id.tv_sent)
 
+        // 顶栏「关闭」只关本页，不断开连接（断开在主页）
+        findViewById<Button>(R.id.btn_close).setOnClickListener { finish() }
+
         keys.forEach { (id, code) ->
             findViewById<Button>(id).setOnClickListener { send(code) }
         }
+
+        // 与 TV 端同一份 Inter 字体
+        Ui.apply(window.decorView)
     }
 
     private fun send(code: Int) {

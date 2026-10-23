@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 纯黑底 + 顶部极淡的品牌辉光，与 Aerial 的深色壁纸观感一致 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/background" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:centerColor="#0A2FD0A5"
+                android:endColor="#00000000"
+                android:startColor="#1A5B5BF0" />
+        </shape>
+    </item>
+</layer-list>

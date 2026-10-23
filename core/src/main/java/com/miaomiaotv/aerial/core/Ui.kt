@@ -1,4 +1,4 @@
-package com.miaomiaotv.aerial
+package com.miaomiaotv.aerial.core
 
 import android.content.Context
 import android.graphics.Typeface

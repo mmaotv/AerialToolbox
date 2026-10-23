@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应图标：背景渐变 + 前景白弧，canvas 108 / 安全区 66，与上游 aerial-tv 的构造一致。
+  API 26 以下由 mipmap-*dpi/ic_launcher.png 兜底。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

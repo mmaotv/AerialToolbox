@@ -1,7 +1,7 @@
 package com.miaomiaotv.aerial.phone
 
 import android.app.Activity
-import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -12,9 +12,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.miaomiaotv.aerial.core.AerialRunner
+import com.miaomiaotv.aerial.core.AerialSettings
 import com.miaomiaotv.aerial.core.CleanTvRunner
 import com.miaomiaotv.aerial.core.HomeRoles
 import com.miaomiaotv.aerial.core.Target
+import com.miaomiaotv.aerial.core.Ui
 
 class DashboardActivity : Activity() {
 
@@ -22,8 +24,8 @@ class DashboardActivity : Activity() {
     private lateinit var tvHome: TextView
     private lateinit var tvStatus: TextView
     private lateinit var tvAppVersion: TextView
-    private lateinit var btnTargetAerial: Button
-    private lateinit var btnTargetClean: Button
+    private lateinit var btnTargetAerial: TextView
+    private lateinit var btnTargetClean: TextView
     private lateinit var btnInstall: Button
     private lateinit var btnRestore: Button
     private lateinit var btnVerify: Button
@@ -35,6 +37,12 @@ class DashboardActivity : Activity() {
     private lateinit var btnRemote: Button
     private lateinit var btnScreenshot: Button
     private lateinit var btnBack: Button
+    private lateinit var btnUpdate: Button
+    private lateinit var btnAbout: Button
+    private lateinit var opt1: TextView
+    private lateinit var opt2: TextView
+    private lateinit var opt3: TextView
+    private lateinit var settings: AerialSettings
 
     private val logBuilder = StringBuilder()
     private var busy = false
@@ -66,6 +74,15 @@ class DashboardActivity : Activity() {
         btnRemote = findViewById(R.id.btn_remote)
         btnScreenshot = findViewById(R.id.btn_screenshot)
         btnBack = findViewById(R.id.btn_back)
+        btnUpdate = findViewById(R.id.btn_update)
+        btnAbout = findViewById(R.id.btn_about)
+        opt1 = findViewById(R.id.opt_1)
+        opt2 = findViewById(R.id.opt_2)
+        opt3 = findViewById(R.id.opt_3)
+
+        settings = AerialSettings(this)
+        // 目标是持久化的：上次选了 CleanYourTV，下次打开还是它
+        Session.target = Target.current(this)
 
         btnTargetAerial.setOnClickListener { switchTarget(Target.AERIAL) }
         btnTargetClean.setOnClickListener { switchTarget(Target.CLEAN_TV) }
@@ -75,10 +92,19 @@ class DashboardActivity : Activity() {
         btnRepair.setOnClickListener { onRepair() }
         btnRemote.setOnClickListener { startActivity(Intent(this, RemoteActivity::class.java)) }
         btnScreenshot.setOnClickListener { startActivity(Intent(this, ScreenshotActivity::class.java)) }
+        btnUpdate.setOnClickListener { startActivity(Intent(this, UpdateActivity::class.java)) }
+        btnAbout.setOnClickListener { startActivity(Intent(this, AboutActivity::class.java)) }
         btnBack.setOnClickListener { Session.close(); finish() }
+
+        opt1.setOnClickListener { onOption(0) }
+        opt2.setOnClickListener { onOption(1) }
+        opt3.setOnClickListener { onOption(2) }
 
         applyTargetStyle()
         refreshInfo()
+
+        // 与 TV 端同一份 Inter 字体
+        Ui.apply(window.decorView)
     }
 
     override fun onResume() {
@@ -93,16 +119,66 @@ class DashboardActivity : Activity() {
 
     private fun switchTarget(target: Target) {
         Session.target = target
+        Target.select(this, target)
         applyTargetStyle()
         refreshInfo()
     }
 
     private fun applyTargetStyle() {
         val aerialSel = Session.target == Target.AERIAL
-        btnTargetAerial.setBackgroundResource(if (aerialSel) R.drawable.bg_target_sel else R.drawable.bg_target)
-        btnTargetAerial.setTextColor(resources.getColor(if (aerialSel) R.color.accent_ink else R.color.text))
-        btnTargetClean.setBackgroundResource(if (aerialSel) R.drawable.bg_target else R.drawable.bg_target_sel)
-        btnTargetClean.setTextColor(resources.getColor(if (aerialSel) R.color.text else R.color.accent_ink))
+        btnTargetAerial.setBackgroundResource(if (aerialSel) R.drawable.bg_chip_on else R.drawable.bg_chip)
+        btnTargetAerial.setTextColor(resources.getColor(if (aerialSel) R.color.text_primary else R.color.text_secondary))
+        btnTargetClean.setBackgroundResource(if (aerialSel) R.drawable.bg_chip else R.drawable.bg_chip_on)
+        btnTargetClean.setTextColor(resources.getColor(if (aerialSel) R.color.text_secondary else R.color.text_primary))
+        renderOptions()
+    }
+
+    // ===================== 安装选项（与电视端三张开关卡片一一对应） =====================
+
+    private fun onOption(slot: Int) {
+        if (busy) return
+        when (Session.target) {
+            Target.AERIAL -> when (slot) {
+                0 -> settings.useGuard = !settings.useGuard
+                1 -> settings.keepAdb = !settings.keepAdb
+                2 -> settings.ownScreensaver = !settings.ownScreensaver
+            }
+            Target.CLEAN_TV -> when (slot) {
+                0 -> settings.cytInputKey = !settings.cytInputKey
+                1 -> settings.cytHomeKey = !settings.cytHomeKey
+                2 -> settings.ownScreensaver = !settings.ownScreensaver
+            }
+        }
+        renderOptions()
+    }
+
+    private fun renderOptions() {
+        val on = getString(R.string.state_on)
+        val off = getString(R.string.state_off)
+        val triples: List<Triple<String, Boolean, Boolean>> = if (Session.target.isAerial) {
+            listOf(
+                Triple(
+                    if (settings.useGuard) getString(R.string.opt_channel_guard) else getString(R.string.opt_channel_standard),
+                    settings.useGuard, false
+                ),
+                Triple(getString(R.string.opt_keep_adb, if (settings.keepAdb) on else off), settings.keepAdb, false),
+                Triple(getString(R.string.opt_screensaver, if (settings.ownScreensaver) on else off), settings.ownScreensaver, false)
+            )
+        } else {
+            listOf(
+                Triple(getString(R.string.opt_input_key, if (settings.cytInputKey) on else off), settings.cytInputKey, false),
+                Triple(getString(R.string.opt_home_key, if (settings.cytHomeKey) on else off), settings.cytHomeKey, false),
+                Triple(getString(R.string.opt_screensaver, if (settings.ownScreensaver) on else off), settings.ownScreensaver, false)
+            )
+        }
+        listOf(opt1, opt2, opt3).forEachIndexed { index, view ->
+            val (label, enabled, _) = triples[index]
+            view.text = label
+            view.setBackgroundResource(if (enabled) R.drawable.bg_chip_on else R.drawable.bg_chip)
+            view.setTextColor(
+                resources.getColor(if (enabled) R.color.text_primary else R.color.text_secondary)
+            )
+        }
     }
 
     private fun sh(cmd: String): String = runCatching {
@@ -174,6 +250,8 @@ class DashboardActivity : Activity() {
             btnRestore.isEnabled = en
             btnVerify.isEnabled = en
             btnRepair.isEnabled = en
+            btnUpdate.isEnabled = en
+            btnAbout.isEnabled = en
         }
     }
 
@@ -199,7 +277,7 @@ class DashboardActivity : Activity() {
 
     private fun onInstall() {
         val target = Session.target
-        val useGuard = false
+        val useGuard = settings.useGuard
         runOp("一键安装 ${target.label}") { onLog, onStep ->
             val ch = Session.channel ?: return@runOp
             // 接管前先记下原桌面，还原时才还得出去（HOME 键失灵修复的关键）
@@ -213,13 +291,18 @@ class DashboardActivity : Activity() {
 
             val outcome = if (target.isAerial) {
                 AerialRunner(ch, onLog, onStep).install(
-                    staging, keepAdb = true, ownScreensaver = true, useGuard = useGuard
+                    staging,
+                    keepAdb = settings.keepAdb,
+                    ownScreensaver = settings.ownScreensaver,
+                    useGuard = useGuard
                 )
             } else {
                 CleanTvRunner(ch, onLog, onStep).install(
                     staging,
                     stockHint = Session.stockLauncher.ifBlank { null },
-                    inputKey = false, homeKey = false, screensaver = true
+                    inputKey = settings.cytInputKey,
+                    homeKey = settings.cytHomeKey,
+                    screensaver = settings.ownScreensaver
                 )
             }
             onLog("————")
@@ -236,7 +319,9 @@ class DashboardActivity : Activity() {
             val ch = Session.channel ?: return@runOp
             val outcome = if (target.isAerial) {
                 AerialRunner(ch, onLog, onStep).restore(
-                    uninstall = true, ownScreensaver = true, prevHome = Session.prevHome
+                    uninstall = true,
+                    ownScreensaver = settings.ownScreensaver,
+                    prevHome = Session.prevHome
                 )
             } else {
                 CleanTvRunner(ch, onLog, onStep).restore(
@@ -278,19 +363,26 @@ class DashboardActivity : Activity() {
         runOp("修复 Aerial 接管") { onLog, onStep ->
             val ch = Session.channel ?: return@runOp
             val outcome = AerialRunner(ch, onLog, onStep).repair(
-                keepAdb = true, ownScreensaver = true, useGuard = false
+                keepAdb = settings.keepAdb,
+                ownScreensaver = settings.ownScreensaver,
+                useGuard = settings.useGuard
             )
             outcome.details.forEach { onLog(it) }
             runOnUiThread { showResult(outcome.title, outcome.details) }
         }
     }
 
+    /**
+     * 结果弹窗走独立 Dialog 窗口 + 自定义布局，与 TV 端同一个视觉、同一套交互语义。
+     * 不用 AlertDialog：系统主题会把内容包进一块灰色方底，跟两端的黑玻璃语言不搭。
+     */
     private fun showResult(title: String, details: List<String>) {
-        val msg = details.joinToString("\n")
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(msg)
-            .setPositiveButton("知道了", null)
-            .show()
+        val dialog = Dialog(this, R.style.Dialog_App)
+        dialog.setContentView(R.layout.dialog_message)
+        dialog.findViewById<TextView>(R.id.tv_title).text = title
+        dialog.findViewById<TextView>(R.id.tv_detail).text = details.joinToString("\n")
+        dialog.findViewById<Button>(R.id.btn_ok).setOnClickListener { dialog.dismiss() }
+        dialog.setCanceledOnTouchOutside(true)
+        dialog.show()
     }
 }

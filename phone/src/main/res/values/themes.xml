@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  样式与 TV 端（app 模块）一一对应：同一套黑色窗口、同一套文字刻度、同一套按钮。
+  两端看起来必须是同一个产品，只是基座主题按平台区分——
+  TV 端用 DeviceDefault（要兼容老电视），手机端用 Material（API 21+ 的稳定基座）；
+  可见的令牌全部来自下面的 Text.* / Btn.* 与 colors.xml。
+-->
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+    </style>
+
+    <!--
+      模态弹窗主题：与 TV 端 Dialog.App 一致。窗口背景必须透明，
+      否则圆角卡片会被套进一块方底色里；窗口是独立的，背景拿不到触摸。
+    -->
+    <style name="Dialog.App" parent="@android:style/Theme.Material.Dialog.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.78</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- 文字基座：Text.* 的公共父级（点号命名会隐式继承同名前缀） -->
+    <style name="Text" />
+
+    <!-- 大标题：26sp / W600，对应上游 Type.LargeTitle -->
+    <style name="Text.LargeTitle">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 区块标题：19sp / W600，对应 Type.Title -->
+    <style name="Text.Title">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">19sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 说明文字：13sp / W500，对应 Type.Callout -->
+    <style name="Text.Callout">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 小标签：11sp / W500，对应 Type.Caption -->
+    <style name="Text.Caption">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!--
+      分组小标题：11sp / W600 / 加字距。
+      手机端按钮比电视端密集，光靠间距分不开，得靠这行字把同类操作归到一块。
+    -->
+    <style name="Text.Section">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!--
+      胶囊：目标切换与安装选项共用。选中态由代码换 background（bg_chip / bg_chip_on），
+      所以这里只定尺寸与文字约束——单行 + 省略号，避免长文案把胶囊撑破。
+    -->
+    <style name="Chip">
+        <item name="android:gravity">center</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- 按钮基座：去掉系统按钮的阴影与最小宽度，纯色板 + 按压反白 -->
+    <style name="Btn" parent="@android:style/Widget.Material.Button">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+    </style>
+
+    <!-- 主操作：品牌渐变，按压转白板 -->
+    <style name="Btn.Primary">
+        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:textColor">@color/btn_primary_text</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- 次操作：Fill 底，按压转白板 -->
+    <style name="Btn.Ghost">
+        <item name="android:background">@drawable/btn_ghost</item>
+        <item name="android:textColor">@color/btn_ghost_text</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+</resources>

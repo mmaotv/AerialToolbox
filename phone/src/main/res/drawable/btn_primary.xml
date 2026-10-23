@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  主按钮：品牌渐变常态；按压转近白色板（与 TV 端聚焦反白同一语义，手机上用按压表达）。
+  文字色在 res/color/btn_primary_text.xml 里同步切换。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/focus" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/bg_brand" />
+</selector>
