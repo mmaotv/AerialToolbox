@@ -47,9 +47,12 @@ class BundledRelease(
      * 把内置包释放到 shell 能读的目录，返回可直接安装的文件。
      *
      * @param useGuard true 取 guard 版（不带 HOME 声明，靠无障碍服务接管）
+     * @param destDir 释放到哪里；不传就用公共下载目录。手机端只把它当「推送源」，
+     *                传到电视后就没用了，放应用自己的 cache 目录即可，
+     *                免得往用户的「下载」里塞几百 MB 也不需要存储权限。
      * @return 没有对应的内置包（或被裁掉）时返回 null，调用方应回退到联网下载
      */
-    fun extract(useGuard: Boolean): File? {
+    fun extract(useGuard: Boolean, destDir: File? = null): File? {
         // 想要 guard 版但内置包里没有时，退回标准版而不是直接失败
         val actualGuard = when {
             useGuard && hasGuard() -> true
@@ -62,7 +65,7 @@ class BundledRelease(
         val version = info().version.ifBlank { "bundled" }
         val shortName = name.removeSuffix(".apk").replace(Regex("^aerial-"), "")
         val dest = File(
-            ApkStore.stagingDir(context),
+            destDir ?: ApkStore.stagingDir(context),
             "$shortName-$version.apk"
         )
         if (dest.exists() && dest.length() > MIN_APK_BYTES) return dest

@@ -376,7 +376,7 @@ class UpdateActivity : Activity() {
         val version: String?
         if (target.isAerial) {
             val runner = AerialRunner(channel, onLog, onStep)
-            val outcome = runner.install(apk, settings.keepAdb, settings.ownScreensaver, settings.useGuard)
+            val outcome = runner.install(apk.path, settings.keepAdb, settings.ownScreensaver, settings.useGuard)
             version = runner.installedVersion()
             finished = outcome.ok
             title = outcome.title
@@ -392,7 +392,7 @@ class UpdateActivity : Activity() {
             }
             val runner = CleanTvRunner(channel, onLog, onStep)
             val outcome = runner.install(
-                apk,
+                apk.path,
                 settings.cytStockLauncher,
                 settings.cytInputKey,
                 settings.cytHomeKey,

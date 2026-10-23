@@ -34,4 +34,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AerialToolbox"
+// core 是共享库：电视端 app 与手机端 phone 都依赖它，复用同一套设备操作逻辑
+include(":core")
 include(":app")
+include(":phone")

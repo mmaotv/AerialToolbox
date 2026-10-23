@@ -23,10 +23,6 @@ class CleanTvRunner(
     private val onStep: (label: String, percent: Int) -> Unit
 ) {
 
-    data class Outcome(val ok: Boolean, val title: String, val details: List<String>)
-
-    data class Check(val label: String, val ok: Boolean, val detail: String)
-
     // ===================== 基础 =====================
 
     private fun sh(command: String): String =
@@ -76,11 +72,11 @@ class CleanTvRunner(
     // ===================== 安装 =====================
 
     /**
-     * @param apk 已落到本机、shell 可读的安装包
+     * @param apkPath 安装包在**设备上**的路径（不是本机路径！）
      * @param stockHint 上一次记下的原桌面包名；为空时现场探测
      */
     fun install(
-        apk: File,
+        apkPath: String,
         stockHint: String?,
         inputKey: Boolean,
         homeKey: Boolean,
@@ -155,7 +151,7 @@ class CleanTvRunner(
 
         // 3. 装包
         progress.step("安装桌面")
-        val install = installApk(apk)
+        val install = installApk(apkPath)
         if (!install.first) {
             progress.done(false)
             return Outcome(false, "安装失败", listOf(install.second).filter { it.isNotBlank() })
@@ -484,14 +480,19 @@ class CleanTvRunner(
     // ===================== 内部 =====================
 
     /** @return (成功, 失败原因) */
-    private fun installApk(apk: File): Pair<Boolean, String> {
-        if (!apk.exists() || apk.length() < 64 * 1024) {
-            return false to "安装包不存在或已损坏（${apk.length()} 字节）"
+    private fun installApk(apkPath: String): Pair<Boolean, String> {
+        // 设备上的路径要原样交给设备 shell，不做本机文件系统相关的规范化
+        val source = apkPath
+        // 大小必须在设备上量：手机端远程模式下，安装包在电视上，
+        // 用 File.exists() 查的是手机，永远查不到（详见 DeviceFiles 的说明）
+        val size = DeviceFiles.size({ sh(it) }, source)
+        if (size < 64 * 1024) {
+            return false to "安装包不存在或已损坏（设备上读不到 $source）"
         }
-        onLog("安装包：${apk.absolutePath}（${apk.length() / 1024} KB）")
-        runCatching { sh("cp \"${apk.absolutePath}\" ${CleanTvSpec.STAGING_APK}") }
+        onLog("安装包：$source（${size / 1024} KB）")
+        runCatching { sh("cp \"$source\" ${CleanTvSpec.STAGING_APK}") }
         val staged = sh("ls -l ${CleanTvSpec.STAGING_APK}").contains("tvhome.apk")
-        val target = if (staged) CleanTvSpec.STAGING_APK else apk.absolutePath
+        val target = if (staged) CleanTvSpec.STAGING_APK else source
 
         var output = sh("pm install -r $target")
         onLog("pm install 返回：${output.trim().take(200)}")

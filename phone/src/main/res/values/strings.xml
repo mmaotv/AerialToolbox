@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">桌面工具箱·手机端</string>
+
+    <!-- 连接页 -->
+    <string name="connect_subtitle">在手机上远程连接电视/盒子，安装并接管桌面</string>
+    <string name="label_ip">电视 IP 地址</string>
+    <string name="label_port">端口</string>
+    <string name="btn_connect">连接</string>
+    <string name="btn_scan">扫描局域网</string>
+    <string name="scanning">扫描中…</string>
+    <string name="saved_devices">历史设备</string>
+    <string name="found_devices">发现的可调试设备</string>
+    <string name="no_devices">还没有设备，点「扫描局域网」或手动输入</string>
+    <string name="status_disconnected">未连接</string>
+    <string name="status_connecting">连接中…</string>
+    <string name="status_connected">已连接 %s</string>
+    <string name="auth_hint">请在电视上点「允许 USB 调试」</string>
+    <string name="connect_fail">连接失败：%s</string>
+    <string name="scan_fail">扫描失败：%s</string>
+    <string name="tip_ip_example">例如 192.168.1.100</string>
+
+    <!-- 主页 -->
+    <string name="device_info">设备</string>
+    <string name="current_home">当前默认桌面</string>
+    <string name="btn_install">一键安装</string>
+    <string name="btn_restore">还原并卸载</string>
+    <string name="btn_verify">验收</string>
+    <string name="btn_repair">修复接管</string>
+    <string name="target_aerial">Aerial</string>
+    <string name="target_clean">CleanYourTV</string>
+    <string name="log_title">运行日志</string>
+    <string name="running">正在执行…</string>
+    <string name="btn_remote">遥控器</string>
+    <string name="btn_screenshot">截图</string>
+    <string name="back">断开</string>
+    <string name="unknown">未知</string>
+    <string name="none_default">（无默认桌面）</string>
+    <string name="app_version">工具箱手机端 v%1$s</string>
+
+    <!-- 遥控器 -->
+    <string name="remote_title">遥控器</string>
+    <string name="remote_home">主页</string>
+    <string name="remote_back">返回</string>
+    <string name="remote_menu">菜单</string>
+    <string name="remote_ok">确认</string>
+    <string name="remote_up">上</string>
+    <string name="remote_down">下</string>
+    <string name="remote_left">左</string>
+    <string name="remote_right">右</string>
+    <string name="remote_power">电源</string>
+    <string name="remote_sent">已发送：%s</string>
+    <string name="remote_not_connected">未连接，无法发送</string>
+
+    <!-- 截图 -->
+    <string name="screenshot_title">截图</string>
+    <string name="btn_capture">截取电视屏幕</string>
+    <string name="screenshot_fail">截图失败：%s</string>
+    <string name="screenshot_saved">已保存到：%s</string>
+    <string name="screenshot_not_connected">未连接，无法截图</string>
+</resources>

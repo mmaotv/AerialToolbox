@@ -1,6 +1,7 @@
 package com.miaomiaotv.aerial.adb
 
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -119,13 +120,27 @@ class AdbChannel {
     }
 
     /**
-     * 执行一条 shell 命令并返回回显内容。
+     * 执行一条 shell 命令并返回原始回显字节。
+     *
+     * `screencap -p` 这类输出二进制（PNG）的命令必须走它——中途转成 String 会破坏 PNG 字节。
      */
-    fun shell(command: String): String {
+    fun shellBytes(command: String): ByteArray = readStream("shell:$command")
+
+    /**
+     * 走 `exec:` 通道执行命令并返回原始字节。
+     *
+     * 与 `shell:` 不同，`exec:` 不分配伪终端（pty），因此不会对输出做
+     * `\n` → `\r\n` 的换行转换——这对 `screencap -p` 的 PNG 二进制至关重要，
+     * 否则图片会损坏打不开。`exec:` 自 Android 5.0 起由 adbd 支持，覆盖本工具 minSdk。
+     */
+    fun execBytes(command: String): ByteArray = readStream("exec:$command")
+
+    /** 开一条命令流，把设备回显的全部字节收齐后返回（直到设备发 CLSE） */
+    private fun readStream(service: String): ByteArray {
         if (!isConnected) throw IOException("尚未连接")
 
         val localId = ++nextStreamId
-        write(CMD_OPEN, localId, 0, "shell:$command".toByteArray() + byteArrayOf(0))
+        write(CMD_OPEN, localId, 0, service.toByteArray() + byteArrayOf(0))
 
         val reply = waitForOpenReply(localId)
         val remoteId = reply.arg0
@@ -143,13 +158,92 @@ class AdbChannel {
                     }
                     // 设备已输出完毕并完成关闭，此时不应再回 CLSE，
                     // 否则设备会多补一个关闭包，污染下一条命令的读取。
-                    CMD_CLSE -> return String(result.toByteArray())
+                    CMD_CLSE -> return result.toByteArray()
                     CMD_OKAY -> Unit
                 }
             }
         } catch (e: IOException) {
             runCatching { write(CMD_CLSE, localId, remoteId) }
             throw e
+        }
+    }
+
+    /** 执行 shell 命令并返回回显字符串（文本命令用这个） */
+    fun shell(command: String): String = String(shellBytes(command), Charsets.UTF_8)
+
+    /**
+     * 把本机文件推送到设备（等价于 `adb push`），走 `sync:` 通道。
+     *
+     * 手机端必须用它：安装包在手机上，要先推到电视的 /data/local/tmp 才能 `pm install`；
+     * 电视端本机模式用不到（安装包本来就在设备上）。
+     *
+     * 实现了 ADB sync 协议的最小子集（SEND → DATA* → DONE），按设备回的 OKAY 逐条确认，
+     * 因此不依赖 1MB 写窗口，几 MB 的安装包也能稳定推完。
+     */
+    fun push(local: File, remotePath: String, mode: Int = 0b000_100_100_100) {
+        if (!isConnected) throw IOException("尚未连接")
+
+        val localId = ++nextStreamId
+        write(CMD_OPEN, localId, 0, "sync:".toByteArray() + byteArrayOf(0))
+        val reply = waitForOpenReply(localId)
+        val remoteId = reply.arg0
+
+        try {
+            val name = "$remotePath,0${mode.toString(8)}\u0000"
+            syncWrite(remoteId, localId, "SEND", name.toByteArray(Charsets.UTF_8))
+            expectSyncAck(localId, remoteId)
+
+            val buffer = ByteArray(PUSH_CHUNK)
+            local.inputStream().use { input ->
+                var read: Int
+                while (input.read(buffer).also { read = it } > 0) {
+                    syncWrite(remoteId, localId, "DATA", buffer.copyOf(read))
+                    expectSyncAck(localId, remoteId)
+                }
+            }
+
+            val mtime = byteArrayOf(0, 0, 0, 0)
+            syncWrite(remoteId, localId, "DONE", mtime)
+            expectSyncAck(localId, remoteId)
+        } catch (e: IOException) {
+            runCatching { write(CMD_CLSE, localId, remoteId) }
+            throw e
+        } finally {
+            runCatching { write(CMD_CLSE, localId, remoteId) }
+        }
+    }
+
+    /** 写一个 sync 层报文：8 字节头（id + 长度）+ 数据 */
+    private fun syncWrite(remoteId: Int, localId: Int, id: String, data: ByteArray) {
+        val header = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
+            .put(id.toByteArray(Charsets.US_ASCII))
+            .putInt(data.size)
+            .array()
+        write(CMD_WRTE, localId, remoteId, header + data)
+    }
+
+    /**
+     * 读 ADB 报文直到收到本流的 OKAY（设备确认收到上一条 WRTE）。
+     * 设备若回 WRTE 则是 sync 层的 FAIL/OKAY：FAIL 直接抛错，OKAY 回 ack 后继续读。
+     */
+    private fun expectSyncAck(localId: Int, remoteId: Int) {
+        while (true) {
+            val message = read()
+            when (message.cmd) {
+                CMD_OKAY, CMD_CLSE -> return
+                CMD_WRTE -> {
+                    val id = if (message.payload.size >= 4)
+                        String(message.payload.copyOf(4), Charsets.US_ASCII) else ""
+                    if (id == "FAIL") {
+                        val reason = if (message.payload.size > 4)
+                            String(message.payload.copyOfRange(4, message.payload.size), Charsets.UTF_8)
+                        else ""
+                        throw IOException("推送被设备拒绝：$reason")
+                    }
+                    write(CMD_OKAY, localId, remoteId)
+                }
+                else -> Unit
+            }
         }
     }
 
@@ -232,6 +326,9 @@ class AdbChannel {
     companion object {
         private const val HEADER_SIZE = 24
         private val EMPTY = ByteArray(0)
+
+        /** 推送时单块数据大小：远小于 1MB 的 ADB 报文上限，逐块确认保证稳定 */
+        private const val PUSH_CHUNK = 32 * 1024
 
         private const val CMD_AUTH = 0x48545541
         private const val CMD_CNXN = 0x4e584e43

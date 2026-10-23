@@ -58,9 +58,15 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -n1)
+          PHONE_VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' phone/build.gradle.kts | head -n1)
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "PHONE_VERSION=$PHONE_VERSION" >> "$GITHUB_ENV"
+          # 电视端
           cp app/build/outputs/apk/release/app-release.apk "AerialToolbox-${VERSION}.apk"
           sha256sum "AerialToolbox-${VERSION}.apk" | tee "AerialToolbox-${VERSION}.apk.sha256"
+          # 手机端
+          cp phone/build/outputs/apk/release/phone-release.apk "AerialToolbox-Phone-${PHONE_VERSION}.apk"
+          sha256sum "AerialToolbox-Phone-${PHONE_VERSION}.apk" | tee "AerialToolbox-Phone-${PHONE_VERSION}.apk.sha256"
 
       - name: 上传 artifact
         uses: actions/upload-artifact@v4
