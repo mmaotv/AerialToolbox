@@ -51,13 +51,19 @@ object ToolboxUpdater {
         return null
     }
 
-    /** 在 Release 资产里找安装包，sha256 之类的附属文件跳过 */
+    /**
+     * 在 Release 资产里找**电视端**的安装包。
+     *
+     * 完整匹配 `AerialToolbox-<版本>.apk`，不匹配的前缀一律跳过 ——
+     * 手机端的资产名是 `AerialToolbox-Phone-<版本>.apk`，前缀一样但不是电视端的包，
+     * 认错了会让用户把手机端包装到电视上。
+     */
     private fun apkUrl(json: JSONObject): String? {
         val assets = json.optJSONArray("assets") ?: return null
         for (index in 0 until assets.length()) {
             val item = assets.optJSONObject(index) ?: continue
             val name = item.optString("name")
-            if (name.startsWith(ToolboxInfo.APK_PREFIX) && name.endsWith(".apk")) {
+            if (ToolboxInfo.TV_APK_PATTERN.matches(name)) {
                 val url = item.optString("browser_download_url")
                 if (url.isNotBlank()) return url
             }

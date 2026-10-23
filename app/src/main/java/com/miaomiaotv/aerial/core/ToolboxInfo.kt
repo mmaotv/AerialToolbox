@@ -26,6 +26,15 @@ object ToolboxInfo {
     /** Release 里安装包的名字前缀：AerialToolbox-1.3.0.apk */
     const val APK_PREFIX = "AerialToolbox-"
 
+    /**
+     * 电视端安装包的资产名规则：`AerialToolbox-<版本>.apk`，版本只允许数字与点。
+     *
+     * 为什么不用「前缀匹配」：本仓库同时发**手机端**安装包（`AerialToolbox-Phone-1.0.0.apk`），
+     * 前缀匹配会把它也当成电视端的自更新包，用户点了升级就会装错应用。
+     * 这里收紧成完整匹配，手机端那套带版本号的资产名自然被排除。
+     */
+    val TV_APK_PATTERN = Regex("^AerialToolbox-\\d+(\\.\\d+)*\\.apk$")
+
     fun versionName(context: Context): String = runCatching {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     }.getOrNull().orEmpty().ifBlank { "未知" }

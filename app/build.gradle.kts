@@ -59,5 +59,7 @@ android {
 }
 
 dependencies {
+    // 共享核心：Aerial / CleanYourTV 的设备操作与 ADB 客户端
+    implementation(project(":core"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
 }

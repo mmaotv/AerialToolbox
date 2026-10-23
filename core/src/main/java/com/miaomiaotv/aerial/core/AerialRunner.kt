@@ -20,20 +20,12 @@ class AerialRunner(
     private val onStep: (label: String, percent: Int) -> Unit
 ) {
 
-    data class Outcome(
-        val ok: Boolean,
-        val title: String,
-        val details: List<String>
-    )
-
     data class DeviceInfo(
         val model: String,
         val brand: String,
         val sdk: Int,
         val lowRam: Boolean
     )
-
-    data class Check(val label: String, val ok: Boolean, val detail: String)
 
     // ===================== 基础查询 =====================
 
@@ -69,10 +61,10 @@ class AerialRunner(
     /**
      * 完整安装流程：装包 → 授权 → 接管桌面 → 屏保/常开 → 启动验收。
      *
-     * @param apk 已下载到本机、shell 可读的安装包
+     * @param apkPath 安装包在**设备上**的路径（不是本机路径！）
      */
     fun install(
-        apk: File,
+        apkPath: String,
         keepAdb: Boolean,
         ownScreensaver: Boolean,
         useGuard: Boolean
@@ -106,7 +98,7 @@ class AerialRunner(
 
         // 2) 安装
         progress.step("安装桌面")
-        val installResult = installApk(apk)
+        val installResult = installApk(apkPath)
         if (!installResult.ok) {
             failures += "安装失败：${installResult.reason}"
             return finish(progress, failures, notes)
@@ -200,16 +192,20 @@ class AerialRunner(
     /**
      * 安装安装包。
      *
+     * @param apkPath 安装包在设备上的路径（电视端是公共下载目录，手机端是 push 过去的 staging）
+     *
      * 为什么先复制到 /data/local/tmp：负责安装的系统进程在较新安卓上无权读取
      * 外部存储（fuse 上下文无权限），直接用 /sdcard 路径安装会失败；
      * shell 自己的目录系统进程可读，这条路径在小米盒子上已验证。
      */
-    private fun installApk(apk: File): InstallResult {
-        if (!apk.exists() || apk.length() < 1024L) {
-            return InstallResult(false, "安装包不存在或已损坏")
+    private fun installApk(apkPath: String): InstallResult {
+        // 用设备路径原样交给设备 shell，不做任何本机文件系统相关的规范化
+        val source = apkPath
+        val size = DeviceFiles.size({ sh(it) }, source)
+        if (size < 1024L) {
+            return InstallResult(false, "安装包不存在或已损坏（设备上读不到 $source）")
         }
-        val source = apk.absolutePath
-        onLog("安装包：$source（${apk.length() / 1024 / 1024} MB）")
+        onLog("安装包：$source（${size / 1024 / 1024} MB）")
 
         runCatching { sh("cp \"$source\" ${AerialSpec.STAGING_APK}") }
         val stagedReady = sh("ls -l ${AerialSpec.STAGING_APK}").contains("aerial-install.apk")

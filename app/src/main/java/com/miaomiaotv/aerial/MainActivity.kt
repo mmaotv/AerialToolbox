@@ -666,7 +666,7 @@ class MainActivity : Activity() {
                     onLog = { line -> log(line) },
                     onStep = { label, percent -> updateProgress(label, 50 + percent / 2) }
                 )
-                val outcome = installer.install(apk, settings.keepAdb, settings.ownScreensaver, guard)
+                val outcome = installer.install(apk.path, settings.keepAdb, settings.ownScreensaver, guard)
                 installedVersion = installer.installedVersion()
                 AdbSession.installedVersion = installedVersion
                 busy = false
@@ -758,7 +758,7 @@ class MainActivity : Activity() {
 
                 updateProgress("开始安装…", 46)
                 val outcome = cyt.install(
-                    apk,
+                    apk.path,
                     settings.cytStockLauncher,
                     settings.cytInputKey,
                     settings.cytHomeKey,
