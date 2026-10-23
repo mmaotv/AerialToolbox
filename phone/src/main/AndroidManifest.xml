@@ -18,8 +18,16 @@
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="true">
 
+        <!--
+          configChanges 必须自己吃掉旋转：本工具是「一个连接 + 多个页面共享」的结构，
+          页面被系统重建会顺带清空运行日志、丢掉结果弹窗，进行中的操作还会和
+          重置后的 busy 状态打架（用户再点一下按钮就会从头再跑一遍）。
+          旋转场景是真实存在的：接管桌面后新桌面把屏幕转成横屏，回到本工具时
+          按新配置重建；用户自己转手机也一样。
+        -->
         <activity
             android:name=".ConnectActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -30,16 +38,19 @@
 
         <activity
             android:name=".DashboardActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait" />
 
         <activity
             android:name=".RemoteActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait" />
 
         <activity
             android:name=".ScreenshotActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait" />
     </application>

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -104,25 +105,37 @@ class DashboardActivity : Activity() {
         btnTargetClean.setTextColor(resources.getColor(if (aerialSel) R.color.text else R.color.accent_ink))
     }
 
-    private fun sh(cmd: String): String = runCatching { Session.channel?.shell(cmd) }.getOrDefault("") ?: ""
+    private fun sh(cmd: String): String = runCatching {
+        Session.channel?.shell(cmd)
+    }.onFailure { Log.e("PhoneDash", "shell 失败: $cmd", it) }.getOrDefault("") ?: ""
 
-    /** 刷新设备信息、当前默认桌面、是否已安装 */
+    /**
+     * 刷新设备信息、当前默认桌面、是否已安装。
+     *
+     * 必须整个丢到后台线程：这些查询都是走 ADB 的 socket I/O，
+     * 而在主线程做网络操作会触发 StrictMode 的 NetworkOnMainThreadException
+     * （targetSdk ≥ 11 就默认开启），表现就是所有信息永远显示「未知」。
+     */
     private fun refreshInfo() {
         val ch = Session.channel ?: return
-        val model = sh("getprop ro.product.model").trim().ifBlank { getString(R.string.unknown) }
-        val sdk = sh("getprop ro.build.version.sdk").trim().toIntOrNull() ?: 0
-        Session.deviceModel = model
-        Session.androidSdk = sdk
-        Session.currentHome = HomeRoles.current { sh(it) }
-        val home = Session.currentHome.ifBlank { getString(R.string.none_default) }
-        val installed = installedVersion()
-        val installedText = if (installed == null) "（未安装）" else "（已装 $installed）"
+        Session.executor.execute {
+            val model = sh("getprop ro.product.model").trim().ifBlank { getString(R.string.unknown) }
+            val sdk = sh("getprop ro.build.version.sdk").trim().toIntOrNull() ?: 0
+            Session.deviceModel = model
+            Session.androidSdk = sdk
+            Session.currentHome = HomeRoles.current { sh(it) }
+            val home = Session.currentHome.ifBlank { getString(R.string.none_default) }
+            val installed = installedVersion()
+            val installedText = if (installed == null) "（未安装）" else "（已装 $installed）"
 
-        tvDevice.text = "$model · Android $sdk"
-        tvHome.text = "$home $installedText"
-        tvStatus.text = getString(R.string.status_connected, Session.target.label)
-        tvStatus.setTextColor(resources.getColor(R.color.ok))
-        tvAppVersion.text = getString(R.string.app_version, appVersionName())
+            runOnUiThread {
+                tvDevice.text = "$model · Android $sdk"
+                tvHome.text = "$home $installedText"
+                tvStatus.text = getString(R.string.status_connected, Session.target.label)
+                tvStatus.setTextColor(resources.getColor(R.color.ok))
+                tvAppVersion.text = getString(R.string.app_version, appVersionName())
+            }
+        }
     }
 
     /** 工具箱自己的版本号，从包管理器读，界面不会和实际安装包对不上 */
