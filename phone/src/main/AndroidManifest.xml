@@ -6,20 +6,30 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 读本机局域网 IP，用于扫描时推导网段 -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- 手机端自更新：Android 8 起装来自本应用的包需要先声明这个权限 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- 不强制需要触摸屏（也方便在盒子上跑） -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
         android:allowBackup="false"
-        android:icon="@drawable/ic_app"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
 
+        <!--
+          configChanges 必须自己吃掉旋转：本工具是「一个连接 + 多个页面共享」的结构，
+          页面被系统重建会顺带清空运行日志、丢掉结果弹窗，进行中的操作还会和
+          重置后的 busy 状态打架（用户再点一下按钮就会从头再跑一遍）。
+          旋转场景是真实存在的：接管桌面后新桌面把屏幕转成横屏，回到本工具时
+          按新配置重建；用户自己转手机也一样。
+        -->
         <activity
             android:name=".ConnectActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -30,18 +40,44 @@
 
         <activity
             android:name=".DashboardActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait" />
 
         <activity
             android:name=".RemoteActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait" />
 
         <activity
             android:name=".ScreenshotActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".UpdateActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".AboutActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <!--
+          自更新时把下载好的安装包交给系统安装器：Android 7 起安装器不再接受 file://，
+          走这个 provider 以 content:// 一次性授权。只暴露 cacheDir/install 一个目录，
+          文件名不带路径分隔符，杜绝目录穿越；不导出，只有安装器能拿到授权。
+        -->
+        <provider
+            android:name="com.miaomiaotv.aerial.apk.ApkProvider"
+            android:authorities="${applicationId}.apk"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 
 </manifest>

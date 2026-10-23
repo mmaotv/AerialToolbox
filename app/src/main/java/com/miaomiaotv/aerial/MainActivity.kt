@@ -35,6 +35,7 @@ import com.miaomiaotv.aerial.core.ReleaseChecker
 import com.miaomiaotv.aerial.core.Target
 import com.miaomiaotv.aerial.core.ToolboxInfo
 import com.miaomiaotv.aerial.core.VersionCompare
+import com.miaomiaotv.aerial.core.Ui
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.Executors

@@ -20,9 +20,12 @@
     <string name="scan_fail">扫描失败：%s</string>
     <string name="tip_ip_example">例如 192.168.1.100</string>
 
-    <!-- 主页 -->
+    <!-- 主页：section_* 是分组小标题，用来把同类按钮归到一块，避免一整排按钮糊在一起 -->
     <string name="device_info">设备</string>
     <string name="current_home">当前默认桌面</string>
+    <string name="section_options">安装选项</string>
+    <string name="section_actions">桌面操作</string>
+    <string name="section_tools">更新与工具</string>
     <string name="btn_install">一键安装</string>
     <string name="btn_restore">还原并卸载</string>
     <string name="btn_verify">验收</string>
@@ -34,6 +37,7 @@
     <string name="btn_remote">遥控器</string>
     <string name="btn_screenshot">截图</string>
     <string name="back">断开</string>
+    <string name="close">关闭</string>
     <string name="unknown">未知</string>
     <string name="none_default">（无默认桌面）</string>
     <string name="app_version">工具箱手机端 v%1$s</string>
@@ -51,6 +55,7 @@
     <string name="remote_power">电源</string>
     <string name="remote_sent">已发送：%s</string>
     <string name="remote_not_connected">未连接，无法发送</string>
+    <string name="remote_hint">按键会直接发到电视</string>
 
     <!-- 截图 -->
     <string name="screenshot_title">截图</string>
@@ -58,4 +63,43 @@
     <string name="screenshot_fail">截图失败：%s</string>
     <string name="screenshot_saved">已保存到：%s</string>
     <string name="screenshot_not_connected">未连接，无法截图</string>
+
+    <!-- 结果弹窗 -->
+    <string name="btn_ok">知道了</string>
+
+    <!-- 桌面更新 -->
+    <string name="btn_update">桌面更新</string>
+    <string name="update_title">桌面更新</string>
+    <string name="update_installed">电视已装</string>
+    <string name="update_online">线上最新</string>
+    <string name="update_changelog">更新日志</string>
+    <string name="update_download">下载并装到电视</string>
+    <string name="update_check">重新检查</string>
+    <string name="back_to_dashboard">返回主页</string>
+    <string name="update_checking">正在查询最新发行版…</string>
+    <string name="update_latest">已是最新版 v%1$s</string>
+    <string name="update_available">线上 v%1$s，电视 v%2$s</string>
+
+    <!-- 关于 / 更新手机端 -->
+    <string name="btn_about">更新手机端</string>
+    <string name="about_title">关于</string>
+    <string name="about_current">当前版本</string>
+    <string name="about_repo">github.com/mmaotv/AerialToolbox</string>
+    <string name="about_check">检查手机端更新</string>
+    <string name="about_upgrade">下载并升级</string>
+
+    <!--
+      安装选项（与电视端三张开关卡片一一对应）。
+      文案必须压在 4~6 个汉字以内：三枚胶囊均分一行，12sp 下可用宽度只有约 88dp，
+      「安装通道：guard 版」这类长文案会被直接截断。
+      开关状态不写进文案，由胶囊的选中态（品牌描边）表达。
+    -->
+    <string name="opt_channel_guard">通道：guard</string>
+    <string name="opt_channel_standard">通道：标准</string>
+    <string name="opt_keep_adb">ADB 常开：%1$s</string>
+    <string name="opt_screensaver">屏保接管：%1$s</string>
+    <string name="opt_input_key">输入源键：%1$s</string>
+    <string name="opt_home_key">Home 兼容：%1$s</string>
+    <string name="state_on">开</string>
+    <string name="state_off">关</string>
 </resources>

@@ -4,6 +4,9 @@
   45° 线性渐变 #2FD0A5 -> #5B5BF0，白色圆头拱弧 stroke 5.4/108
 工具箱的差异只有一条底座横线，读作"把桌面装上去"。
 
+TV 端与手机端用同一套图标：两个端看起来必须是同一个产品，
+所以这里对两个模块的 res 目录各生成一份。
+
 用法（需要 Pillow 与 numpy）：
     python tools/make_icons.py
 
@@ -15,7 +18,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "app", "src", "main", "res")
+# 两个端共用同一套图标资源
+OUTS = [os.path.join(ROOT, "app", "src", "main", "res"),
+        os.path.join(ROOT, "phone", "src", "main", "res")]
 SS = 8                      # 超采样倍数
 V = 108                     # 设计画布
 BRAND = [(0x2F, 0xD0, 0xA5), (0x5B, 0x5B, 0xF0)]
@@ -113,7 +118,7 @@ def banner(width=320, height=180):
     mx, my = int(W * 0.10), (H - mark.size[1]) // 2
     img.alpha_composite(mark, (mx, my))
 
-    font_path = os.path.join(ROOT, "app", "src", "main", "assets", "fonts", "inter.ttf")
+    font_path = os.path.join(ROOT, "core", "src", "main", "assets", "fonts", "inter.ttf")
     # Inter 的变体轴顺序是 [opsz, wght]
     f1 = ImageFont.truetype(font_path, int(H * 0.21))
     f1.set_variation_by_axes([32, 600])
@@ -129,22 +134,24 @@ def banner(width=320, height=180):
 
 
 if __name__ == "__main__":
-    for folder, size in [("mdpi", 48), ("hdpi", 72), ("xhdpi", 96),
-                         ("xxhdpi", 144), ("xxxhdpi", 192)]:
-        write(os.path.join(OUT, f"mipmap-{folder}", "ic_launcher.png"),
-              render_icon(size, rounded=22))
+    for OUT in OUTS:
+        for folder, size in [("mdpi", 48), ("hdpi", 72), ("xhdpi", 96),
+                             ("xxhdpi", 144), ("xxxhdpi", 192)]:
+            write(os.path.join(OUT, f"mipmap-{folder}", "ic_launcher.png"),
+                  render_icon(size, rounded=22))
 
-    # 自适应图标前景用不透明白弧（渐变由 background 层提供），安全区内留足余量
-    fg = 432
-    f = Image.new("RGBA", (fg, fg), (0, 0, 0, 0))
-    s = fg / V
-    d = ImageDraw.Draw(f)
-    w = max(2, int(round(ARC["width"] * s)))
-    pts = [(x * s, y * s) for x, y in arc_points()]
-    d.line(pts, fill=(255, 255, 255, 255), width=w, joint="curve")
-    for q in (pts[0], pts[-1]):
-        d.ellipse([q[0] - w / 2, q[1] - w / 2, q[0] + w / 2, q[1] + w / 2],
-                  fill=(255, 255, 255, 255))
-    write(os.path.join(OUT, "drawable-xxxhdpi", "ic_launcher_foreground.png"), f)
+        # 自适应图标前景用不透明白弧（渐变由 background 层提供），安全区内留足余量
+        fg = 432
+        f = Image.new("RGBA", (fg, fg), (0, 0, 0, 0))
+        s = fg / V
+        d = ImageDraw.Draw(f)
+        w = max(2, int(round(ARC["width"] * s)))
+        pts = [(x * s, y * s) for x, y in arc_points()]
+        d.line(pts, fill=(255, 255, 255, 255), width=w, joint="curve")
+        for q in (pts[0], pts[-1]):
+            d.ellipse([q[0] - w / 2, q[1] - w / 2, q[0] + w / 2, q[1] + w / 2],
+                      fill=(255, 255, 255, 255))
+        write(os.path.join(OUT, "drawable-xxxhdpi", "ic_launcher_foreground.png"), f)
 
-    write(os.path.join(OUT, "drawable-xhdpi", "banner.png"), banner())
+    # TV banner 只有电视端用得到
+    write(os.path.join(OUTS[0], "drawable-xhdpi", "banner.png"), banner())

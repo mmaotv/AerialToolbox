@@ -9,11 +9,15 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_app">
 
+    <!--
+      裁剪必须保持默认（true）：这里曾经设过 clipChildren="false" 想让焦点放大不被裁，
+      但硬件加速下一个祖先不裁剪，ScrollView 的内容就会画到自己的边界外面——
+      往下滚到底部时，第一行卡片会压到顶部的信息面板上（用户看到的就是「顶部按钮重叠」）。
+      焦点放大只有 3%，卡片本身有 5dp 外边距，行高由内容决定，裁掉的那 1dp 看不出来。
+    -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipChildren="false"
-        android:clipToPadding="false"
         android:orientation="vertical"
         android:paddingStart="40dp"
         android:paddingTop="26dp"
@@ -237,8 +241,6 @@
                 android:id="@+id/actionGrid"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:clipToPadding="false"
                 android:orientation="vertical" />
         </ScrollView>
 

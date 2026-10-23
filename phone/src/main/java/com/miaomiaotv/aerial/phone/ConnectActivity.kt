@@ -12,6 +12,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import com.miaomiaotv.aerial.core.Target
+import com.miaomiaotv.aerial.core.Ui
 
 class ConnectActivity : Activity() {
 
@@ -52,6 +53,9 @@ class ConnectActivity : Activity() {
         refreshSaved()
         updateEmpty()
 
+        // 与 TV 端同一份 Inter 字体
+        Ui.apply(window.decorView)
+
         btnConnect.setOnClickListener { onConnect() }
         btnScan.setOnClickListener { onScan() }
 
@@ -79,6 +83,7 @@ class ConnectActivity : Activity() {
         savedAdapter.clear()
         savedAdapter.addAll(DeviceStore.list(this))
         savedAdapter.notifyDataSetChanged()
+        Ui.apply(window.decorView)
         updateEmpty()
     }
 
@@ -103,7 +108,7 @@ class ConnectActivity : Activity() {
         connecting = true
         btnConnect.isEnabled = false
         tvStatus.text = getString(R.string.status_connecting)
-        tvStatus.setTextColor(resources.getColor(R.color.text_dim))
+        tvStatus.setTextColor(resources.getColor(R.color.text_secondary))
 
         Session.executor.execute {
             try {
@@ -130,7 +135,7 @@ class ConnectActivity : Activity() {
                     btnConnect.isEnabled = true
                     val msg = e.message?.lines()?.firstOrNull() ?: e.javaClass.simpleName
                     tvStatus.text = getString(R.string.connect_fail, msg)
-                    tvStatus.setTextColor(resources.getColor(R.color.bad))
+                    tvStatus.setTextColor(resources.getColor(R.color.danger))
                 }
             }
         }
@@ -150,6 +155,7 @@ class ConnectActivity : Activity() {
                     foundAdapter.clear()
                     foundAdapter.addAll(found)
                     foundAdapter.notifyDataSetChanged()
+                    Ui.apply(window.decorView)
                     updateEmpty()
                     pbScan.visibility = View.GONE
                     btnScan.isEnabled = true
@@ -164,7 +170,7 @@ class ConnectActivity : Activity() {
                     pbScan.visibility = View.GONE
                     btnScan.isEnabled = true
                     tvStatus.text = getString(R.string.scan_fail, e.message ?: "")
-                    tvStatus.setTextColor(resources.getColor(R.color.bad))
+                    tvStatus.setTextColor(resources.getColor(R.color.danger))
                 }
             }
         }

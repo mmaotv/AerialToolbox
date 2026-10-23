@@ -21,8 +21,18 @@ object ToolboxUpdater {
 
     private const val USER_AGENT = "AerialToolbox-Updater/1.0 (Android)"
 
-    /** 取最新发行版；网络不通或没有带 APK 的发行版时返回 null */
-    fun latest(): RemoteRelease? {
+    /** 取电视端工具箱的最新发行版；网络不通或没有带 APK 的发行版时返回 null */
+    fun latest(): RemoteRelease? = latestFor(ToolboxInfo.TV_APK_PATTERN)
+
+    /** 取手机端工具箱的最新发行版（资产名 `AerialToolbox-Phone-<版本>.apk`） */
+    fun latestPhone(): RemoteRelease? = latestFor(ToolboxInfo.PHONE_APK_PATTERN)
+
+    /**
+     * 扫发行版列表，取第一条带**指定形态**安装包的发行版。
+     *
+     * 两个端共用同一份逻辑，区别只在资产名规则：[pattern] 决定认电视端还是手机端。
+     */
+    private fun latestFor(pattern: Regex): RemoteRelease? {
         val body = runCatching { httpGet(ToolboxInfo.API_LIST) }.getOrNull() ?: return null
         val text = body.trim()
         val candidates: List<JSONObject> = runCatching {
@@ -35,7 +45,7 @@ object ToolboxUpdater {
         }.getOrNull() ?: return null
 
         for (json in candidates) {
-            val apk = apkUrl(json) ?: continue
+            val apk = apkUrl(json, pattern) ?: continue
             val tag = json.optString("tag_name")
             return RemoteRelease(
                 version = VersionCompare.normalize(tag),
@@ -58,12 +68,12 @@ object ToolboxUpdater {
      * 手机端的资产名是 `AerialToolbox-Phone-<版本>.apk`，前缀一样但不是电视端的包，
      * 认错了会让用户把手机端包装到电视上。
      */
-    private fun apkUrl(json: JSONObject): String? {
+    private fun apkUrl(json: JSONObject, pattern: Regex): String? {
         val assets = json.optJSONArray("assets") ?: return null
         for (index in 0 until assets.length()) {
             val item = assets.optJSONObject(index) ?: continue
             val name = item.optString("name")
-            if (ToolboxInfo.TV_APK_PATTERN.matches(name)) {
+            if (pattern.matches(name)) {
                 val url = item.optString("browser_download_url")
                 if (url.isNotBlank()) return url
             }

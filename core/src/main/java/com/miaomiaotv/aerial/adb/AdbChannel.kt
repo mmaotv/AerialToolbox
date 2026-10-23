@@ -1,5 +1,6 @@
 package com.miaomiaotv.aerial.adb
 
+import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -296,7 +297,10 @@ class AdbChannel {
         val length = buffer.int
         buffer.int
         val magic = buffer.int
-        if (magic != cmd.inv()) throw IOException("收到的报文格式不正确")
+        if (magic != cmd.inv()) {
+            Log.e(TAG, "报文格式不正确: cmd=0x${Integer.toHexString(cmd)} magic=0x${Integer.toHexString(magic)} length=$length")
+            throw IOException("收到的报文格式不正确")
+        }
         val payload = if (length > 0) {
             readExact(length) ?: throw IOException("设备已断开连接")
         } else {
@@ -324,6 +328,7 @@ class AdbChannel {
     }
 
     companion object {
+        private const val TAG = "AdbChannel"
         private const val HEADER_SIZE = 24
         private val EMPTY = ByteArray(0)
 

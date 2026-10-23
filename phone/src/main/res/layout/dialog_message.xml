@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  结果弹窗内容：与 TV 端 dialog_message.xml 同一语汇（Glass 底 + Hairline 描边 + 品牌主按钮）。
+  手机端只需要「标题 + 详情 + 知道了」这一段，进度不靠弹窗（主页有进度条与日志区）。
+  用独立 Dialog 窗口而非盖一层 View：窗口自带遮罩、吃掉背景触摸，和 TV 端行为一致。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="320dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="@color/ok"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_detail"
+            style="@style/Text.Callout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:lineSpacingExtra="4dp" />
+
+        <Button
+            android:id="@+id/btn_ok"
+            style="@style/Btn.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="20dp"
+            android:text="@string/btn_ok" />
+    </LinearLayout>
+</FrameLayout>
