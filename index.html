@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桌面工具箱 AerialToolbox — 给电视 / 盒子一键安装开源桌面</title>
+<meta name="description" content="桌面工具箱 AerialToolbox：无需电脑、无需 root，给 Android 电视 / 盒子一键安装 Aerial 与 CleanYourTV 开源桌面并接管主页键。内置离线包，电视端 + 手机端双形态。">
+<meta property="og:title" content="桌面工具箱 AerialToolbox">
+<meta property="og:description" content="无需电脑、无需 root，给电视/盒子一键安装开源桌面并接管主页键。">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg0:#06060f; --bg1:#0d0d22; --bg2:#161634;
+    --ink:#f5f6ff; --ink-dim:#a9add0; --ink-faint:#6f749b;
+    --blue:#0a84ff; --violet:#7b6cff; --cyan:#28d6e0;
+    --glass:rgba(255,255,255,.06); --glass-bd:rgba(255,255,255,.12);
+    --radius:18px; --maxw:1140px;
+    --grad:linear-gradient(135deg,#0a84ff 0%,#7b6cff 55%,#c86bff 100%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,Roboto,sans-serif;
+    color:var(--ink); background:var(--bg0); line-height:1.6;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-2;
+    background:
+      radial-gradient(900px 600px at 12% -8%,rgba(10,132,255,.22),transparent 60%),
+      radial-gradient(800px 560px at 92% 4%,rgba(123,108,255,.20),transparent 60%),
+      radial-gradient(700px 700px at 50% 120%,rgba(40,214,224,.10),transparent 60%),
+      linear-gradient(180deg,var(--bg0),var(--bg1) 40%,var(--bg2));
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  /* NAV */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+    background:rgba(8,8,18,.55);border-bottom:1px solid var(--glass-bd)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.3px}
+  .brand svg{width:30px;height:30px;border-radius:8px}
+  .brand small{color:var(--ink-dim);font-weight:500;font-size:12px;letter-spacing:.5px}
+  .nav-links{display:flex;gap:26px;font-size:14.5px;color:var(--ink-dim)}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-gh{display:flex;align-items:center;gap:7px;font-size:14px;padding:8px 15px;
+    border:1px solid var(--glass-bd);border-radius:999px;background:var(--glass)}
+  .nav-gh:hover{border-color:var(--blue)}
+  @media(max-width:720px){.nav-links{display:none}}
+  /* HERO */
+  header.hero{padding:74px 0 56px;text-align:center}
+  .badges{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+  .badge{font-size:12px;padding:5px 12px;border-radius:999px;background:var(--glass);
+    border:1px solid var(--glass-bd);color:var(--ink-dim)}
+  .badge b{color:var(--ink)}
+  h1{font-size:clamp(34px,6vw,62px);line-height:1.08;font-weight:800;letter-spacing:-.5px}
+  h1 .accent{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{margin:20px auto 6px;max-width:760px;font-size:clamp(16px,2.2vw,20px);color:var(--ink-dim)}
+  .sub-en{color:var(--ink-faint);font-size:14.5px;max-width:740px;margin:0 auto}
+  .cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:38px}
+  .btn{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:16px;
+    padding:15px 28px;border-radius:14px;transition:.18s transform,.18s box-shadow,.18s border-color}
+  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 30px rgba(123,108,255,.35)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(123,108,255,.5)}
+  .btn-ghost{background:var(--glass);border:1px solid var(--glass-bd);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--blue);transform:translateY(-2px)}
+  .btn small{display:block;font-size:11.5px;font-weight:500;opacity:.85}
+  /* SECTION */
+  section{padding:62px 0}
+  .sec-head{text-align:center;margin-bottom:42px}
+  .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--violet);font-weight:700}
+  h2{font-size:clamp(26px,4vw,38px);margin-top:10px;font-weight:800}
+  .sec-sub{color:var(--ink-dim);margin-top:12px;max-width:680px;margin-left:auto;margin-right:auto}
+  .sec-sub-en{color:var(--ink-faint);font-size:13.5px;margin-top:2px}
+  .grid{display:grid;gap:18px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:860px){.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
+  .card{background:var(--glass);border:1px solid var(--glass-bd);border-radius:var(--radius);
+    padding:26px;backdrop-filter:blur(8px);transition:.18s border-color,.18s transform}
+  .card:hover{border-color:rgba(123,108,255,.5);transform:translateY(-3px)}
+  .card .ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:var(--grad);margin-bottom:16px;font-size:22px}
+  .card h3{font-size:19px;font-weight:700;margin-bottom:4px}
+  .card .h3-en{font-size:12.5px;color:var(--ink-faint);font-weight:500;margin-bottom:12px}
+  .card p{color:var(--ink-dim);font-size:14.5px}
+  .card p .en{display:block;color:var(--ink-faint);font-size:12.5px;margin-top:6px}
+  /* compare two apps */
+  .app-card{background:linear-gradient(160deg,rgba(10,132,255,.10),rgba(123,108,255,.06));
+    border:1px solid var(--glass-bd);border-radius:var(--radius);padding:30px}
+  .app-card h3{font-size:22px;display:flex;align-items:center;gap:10px}
+  .app-card .tag{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--grad);color:#fff;font-weight:700}
+  .app-card ul{list-style:none;margin-top:18px;display:flex;flex-direction:column;gap:12px}
+  .app-card li{display:flex;gap:11px;font-size:14.5px;color:var(--ink-dim)}
+  .app-card li b{color:var(--ink);font-weight:600}
+  .app-card li .mk{color:var(--cyan);flex:none;margin-top:2px}
+  /* upstream */
+  .up-card{text-align:center}
+  .up-card h3{font-size:21px}
+  .up-card .logo{width:64px;height:64px;border-radius:16px;margin:0 auto 16px;
+    background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:30px}
+  .up-card p{color:var(--ink-dim);font-size:14px;margin-top:8px}
+  /* screenshots */
+  .shots{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  @media(max-width:860px){.shots{grid-template-columns:1fr}}
+  .shot{background:var(--glass);border:1px solid var(--glass-bd);border-radius:var(--radius);
+    padding:14px;backdrop-filter:blur(8px)}
+  .shot img{width:100%;border-radius:12px;display:block;box-shadow:0 14px 40px rgba(0,0,0,.4)}
+  .shot .cap{text-align:center;color:var(--ink-dim);font-size:13.5px;margin-top:12px}
+  .shot .cap b{color:var(--ink)}
+  /* download */
+  .dl{background:linear-gradient(160deg,rgba(123,108,255,.14),rgba(40,214,224,.07));
+    border:1px solid var(--glass-bd);border-radius:24px;padding:46px 30px;text-align:center}
+  .dl h2{margin-bottom:8px}
+  .dl .row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .dl .pill{display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+    background:var(--glass);border:1px solid var(--glass-bd);border-radius:16px;padding:18px 22px;min-width:260px}
+  .dl .pill .t{font-size:13px;color:var(--ink-dim)}
+  .dl .pill .v{font-size:22px;font-weight:800}
+  .dl .pill a{margin-top:8px;font-size:14px;color:var(--blue);font-weight:600}
+  .dl .note{margin-top:26px;color:var(--ink-faint);font-size:13px}
+  /* footer */
+  footer{border-top:1px solid var(--glass-bd);padding:40px 0;color:var(--ink-faint);font-size:13.5px}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;align-items:center}
+  footer a{color:var(--ink-dim)}footer a:hover{color:var(--blue)}
+  .disclaimer{max-width:680px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#0a84ff"/><stop offset=".55" stop-color="#7b6cff"/><stop offset="1" stop-color="#c86bff"/>
+        </linearGradient></defs>
+        <rect width="40" height="40" rx="9" fill="url(#g)"/>
+        <rect x="9" y="11" width="22" height="15" rx="3" fill="#0b0b18" opacity=".85"/>
+        <rect x="11.5" y="13.5" width="17" height="10" rx="1.6" fill="#0a84ff" opacity=".9"/>
+        <rect x="17" y="28" width="6" height="3" rx="1" fill="#0b0b18" opacity=".85"/>
+        <rect x="14" y="31" width="12" height="2.4" rx="1.2" fill="#0b0b18" opacity=".85"/>
+      </svg>
+      <span>桌面工具箱<br><small>AerialToolbox</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="#why">为什么</a>
+      <a href="#apps">两个应用</a>
+      <a href="#desktops">上游桌面</a>
+      <a href="#shots">界面</a>
+      <a href="#download">下载</a>
+    </div>
+    <a class="nav-gh" href="https://github.com/mmaotv/AerialToolbox" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.33c-2.23.49-2.7-1.07-2.7-1.07-.37-.94-.9-1.19-.9-1.19-.73-.5.06-.49.06-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.13 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.11.16 1.93.08 2.13.52.56.83 1.28.83 2.15 0 3.08-1.87 3.76-3.66 3.96.29.25.55.74.55 1.49v2.21c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="badges">
+      <span class="badge">无需 <b>root</b></span>
+      <span class="badge">无需 <b>电脑</b></span>
+      <span class="badge">内置<b>离线包</b></span>
+      <span class="badge"><b>MIT</b> 开源</span>
+      <span class="badge">minSdk <b>21</b></span>
+    </div>
+    <h1>给电视 / 盒子，<br><span class="accent">一键安装开源桌面</span></h1>
+    <p class="sub">桌面工具箱把繁琐的 ADB 命令固化进 APK：安装、授权、接管主页键、屏保、验收——全自动完成。支持 Aerial 与 CleanYourTV 两款高质量开源桌面。</p>
+    <p class="sub-en">Install open-source TV launchers (Aerial / CleanYourTV) on Android TV boxes and take over the HOME button — no PC, no root. Ships as a TV app and a phone app.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#download">↓ 下载桌面工具箱 <small>TV 端 + 手机端 · 免费开源</small></a>
+      <a class="btn btn-ghost" href="https://github.com/mmaotv/AerialToolbox" target="_blank" rel="noopener">在 GitHub 上查看</a>
+    </div>
+  </div>
+</header>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Why</div>
+      <h2>它解决什么</h2>
+      <p class="sec-sub">官方安装说明要在电脑上敲一长串 adb 命令，任何一步顺序错了，装得上却主页键回不去。这个工具把这些一次性固化好，还专门解决了一批真实痛点。</p>
+      <p class="sec-sub-en">The official guide is a wall of adb commands on a PC. One wrong step and the HOME button won't return. We bake the whole flow in — and fix real-world edge cases.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card">
+        <div class="ico">📦</div>
+        <h3>内置离线安装包</h3>
+        <div class="h3-en">Bundled offline APKs</div>
+        <p>电视连不上 GitHub？官方安装包直接内置在 APK 里，安装全程不联网。<span class="en">Launcher APKs are bundled inside the app — installs work fully offline, even when the box can't reach GitHub.</span></p>
+      </div>
+      <div class="card">
+        <div class="ico">📱</div>
+        <h3>手机远程也能装</h3>
+        <div class="h3-en">Install from your phone</div>
+        <p>手边没电脑？装手机端，填电视 IP 或用局域网扫描，远程完成安装、遥控、截图。<span class="en">No PC handy? Use the phone app: type the TV IP or scan the LAN, then install remotely with a built-in remote & screenshot.</span></p>
+      </div>
+      <div class="card">
+        <div class="ico">🛡️</div>
+        <h3>接管 / 修复 / 验收</h3>
+        <div class="h3-en">Take over · Repair · Verify</div>
+        <p>装完主页键回原桌面？"修复接管"只重跑授权；"验收检查"按一次主页键确认进的是新桌面。<span class="en">HOME button still returns to stock? "Repair" re-runs grants only; "Verify" presses HOME and checks the foreground window.</span></p>
+      </div>
+      <div class="card">
+        <div class="ico">🔌</div>
+        <h3>适配难搞的盒子</h3>
+        <div class="h3-en">Tricky boxes handled</div>
+        <p>TCL / 雷鸟拒绝 ADB 安装 → 走 guard 通道；小米待机后 ADB 被关 → "ADB 常开"自动开回。<span class="en">TCL/FFALCON block ADB installs → guard channel; Xiaomi kills ADB on sleep → "Keep ADB" re-enables it.</span></p>
+      </div>
+      <div class="card">
+        <div class="ico">🔄</div>
+        <h3>自动版本检测</h3>
+        <div class="h3-en">Auto update checks</div>
+        <p>"桌面更新"进页面才联网，比对本仓库代构建发行版，展示更新日志后再下载。<span class="en">"Desktop Update" checks online only on demand, compares against our built releases, and shows the changelog before downloading.</span></p>
+      </div>
+      <div class="card">
+        <div class="ico">🧹</div>
+        <h3>一键还原卸载</h3>
+        <div class="h3-en">Clean restore & uninstall</div>
+        <p>CleanYourTV 会重新启用原桌面并把主页还回去，可一并卸载，不留残影。<span class="en">CleanYourTV re-enables the original launcher and gives HOME back, then optionally uninstalls — nothing left behind.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="apps">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Two apps, one core</div>
+      <h2>一个仓库，两个应用</h2>
+      <p class="sec-sub">两个应用共用同一套核心逻辑，所以手机上远程装出来的结果，和把工具箱装到电视上自己装，完全一样。</p>
+      <p class="sec-sub-en">Both apps share the same core module, so remote installs from the phone match on-device installs exactly.</p>
+    </div>
+    <div class="grid g2">
+      <div class="app-card">
+        <h3>📺 电视端 <span class="tag">TV</span></h3>
+        <ul>
+          <li><span class="mk">▸</span><span><b>装在盒子上</b>，连自己的 adbd（127.0.0.1:5555），一劳永逸</span></li>
+          <li><span class="mk">▸</span><span>顶栏切换 Aerial / CleanYourTV，宫格随语义换一套</span></li>
+          <li><span class="mk">▸</span><span>一键安装 / 桌面更新 / 修复接管 / 验收检查 / 还原卸载</span></li>
+          <li><span class="mk">▸</span><span>安装通道（标准 ⇄ guard）、ADB 常开、屏保接管等开关</span></li>
+          <li><span class="mk">▸</span><span>包名 <b>com.miaomiaotv.aerial</b></span></li>
+        </ul>
+      </div>
+      <div class="app-card">
+        <h3>📱 手机端 <span class="tag">Phone</span></h3>
+        <ul>
+          <li><span class="mk">▸</span><span><b>装在手机上</b>，填电视 IP（默认 5555）或扫描局域网</span></li>
+          <li><span class="mk">▸</span><span>连过的设备存成历史，点一下就连</span></li>
+          <li><span class="mk">▸</span><span>主页显示型号 / 系统版本 / 当前桌面 / 已装版本</span></li>
+          <li><span class="mk">▸</span><span>内置<b>遥控器</b>（方向/确认/主页/返回/菜单/电源）与<b>截图</b></span></li>
+          <li><span class="mk">▸</span><span>包名 <b>com.miaomiaotv.aerial.phone</b></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="desktops">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Two upstreams</div>
+      <h2>两款上游桌面，随时切换</h2>
+      <p class="sec-sub">两个上游互斥，一次只接管一个。界面、图标、字体都按 Aerial 的 tvOS 设计语言统一。</p>
+      <p class="sec-sub-en">Two mutually exclusive launchers, one taken over at a time. Same tvOS visual language throughout.</p>
+    </div>
+    <div class="grid g2">
+      <div class="card up-card">
+        <div class="logo">🛰️</div>
+        <h3>Aerial</h3>
+        <p>tvOS 风格，航拍屏保，无障碍守护兜底。<br>官方 Release 直接内置，离线可装，更新查上游。<br><span style="color:var(--ink-faint)">内置版本 v1.52</span></p>
+      </div>
+      <div class="card up-card">
+        <div class="logo">🍎</div>
+        <h3>CleanYourTV</h3>
+        <p>Apple TV 风格，dock + 玻璃高光，遥控器按键服务。<br>上游只发源码，由本仓库代构建并降到 Android 5.1。<br><span style="color:var(--ink-faint)">内置版本 v3.0.0</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shots">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Screenshots</div>
+      <h2>界面一览</h2>
+      <p class="sec-sub">电视端双模式主界面：一屏放下安装、更新、修复、验收与各开关。</p>
+    </div>
+    <div class="shots">
+      <div class="shot">
+        <img src="assets/screenshot-main.png" alt="桌面工具箱 · Aerial 模式">
+        <div class="cap"><b>Aerial 模式</b> — 标准/守护通道、ADB 常开、屏保接管</div>
+      </div>
+      <div class="shot">
+        <img src="assets/screenshot-cleantv.png" alt="桌面工具箱 · CleanYourTV 模式">
+        <div class="cap"><b>CleanYourTV 模式</b> — 遥控器按键、Home 键兼容</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <div class="dl">
+      <div class="kicker">Download</div>
+      <h2>免费下载 · 开源</h2>
+      <p class="sec-sub">两个端都是独立 APK，按设备选择。Android 5.0（API 21）及以上可用。</p>
+      <div class="row">
+        <div class="pill">
+          <span class="t">📺 电视端（装在盒子上）</span>
+          <span class="v">v1.3.4</span>
+          <a href="https://github.com/mmaotv/AerialToolbox/releases/download/v1.3.4/AerialToolbox-1.3.4.apk" target="_blank" rel="noopener">AerialToolbox-1.3.4.apk ↓</a>
+        </div>
+        <div class="pill">
+          <span class="t">📱 手机端（远程控制电视）</span>
+          <span class="v">v1.0.2</span>
+          <a href="https://github.com/mmaotv/AerialToolbox/releases/download/phone-v1.0.2/AerialToolbox-Phone-1.0.2.apk" target="_blank" rel="noopener">AerialToolbox-Phone-1.0.2.apk ↓</a>
+        </div>
+      </div>
+      <p class="note">所有版本与更新日志见 <a href="https://github.com/mmaotv/AerialToolbox/releases" target="_blank" rel="noopener" style="color:var(--blue)">GitHub Releases</a> · 源码以 MIT 协议开源</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <div><b style="color:var(--ink)">桌面工具箱 AerialToolbox</b></div>
+      <div class="disclaimer">© 2026 mmaotv · 基于 Aerial（pengchujin）与 CleanYourTV（Gathin23）等开源项目构建，以 MIT 协议发布。</div>
+    </div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap">
+      <a href="https://github.com/mmaotv/AerialToolbox" target="_blank" rel="noopener">GitHub 仓库</a>
+      <a href="https://github.com/mmaotv/AerialToolbox/releases" target="_blank" rel="noopener">下载发行版</a>
+      <a href="https://github.com/pengchujin/aerial-tv" target="_blank" rel="noopener">Aerial 上游</a>
+      <a href="https://github.com/Gathin23/cleanyourtv" target="_blank" rel="noopener">CleanYourTV 上游</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
