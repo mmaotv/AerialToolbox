@@ -1,5 +1,7 @@
 # 桌面工具箱 AerialToolbox
 
+> 🌐 项目主页 / Homepage: **https://mmaotv.github.io/AerialToolbox/**
+
 **给电视 / 电视盒子安装开源桌面（Aerial、CleanYourTV）并接管主页键的一站式工具。**
 不需要电脑、不需要 root、不需要拆机 —— 装到电视上，剩下的它自己用电视本机的调试通道完成；
 也可以装到**手机**上，用手机远程连接电视完成同样的事。
