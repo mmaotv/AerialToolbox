@@ -18,6 +18,10 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- 保持本机 ADB 调试通道常开：开机后把 adb_enabled 写回 1（仅经 ADB 授予后才有效） -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="false"
         android:banner="@drawable/banner"
@@ -69,6 +73,19 @@
             android:authorities="${applicationId}.apk"
             android:exported="false"
             android:grantUriPermissions="true" />
+
+        <!-- 开机 / 应用更新后重新打开 ADB（仅当用户开着「ADB 常开」）。
+             亮屏恢复由 MainActivity 动态注册，这里只放白名单广播。 -->
+        <receiver
+            android:name=".AdbKeepAliveReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

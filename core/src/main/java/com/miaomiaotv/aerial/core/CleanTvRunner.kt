@@ -185,6 +185,15 @@ class CleanTvRunner(
             onLog(grant.trim().take(120))
         }
 
+        // 5.5 写安全设置权限：让 CleanYourTV 也能在开机/待机后把 ADB 重新打开（与 Aerial 对齐）。
+        // 这个权限只能经 ADB 授予、授权后持久化；CleanYourTV 自己的开机接收器会用它恢复 ADB。
+        val wss = sh(CleanTvSpec.grantSecureSettings())
+        if (wss.contains("not a changeable permission")) {
+            onLog("Android 5.1 上写安全设置权限无需运行时授权，已默认可用")
+        } else {
+            onLog("写安全设置权限：${wss.trim().take(80)}")
+        }
+
         // 6. 编译优化（Android 7.0+ 才有，老系统跳过）
         progress.step("编译优化")
         val compile = sh(CleanTvSpec.compileCommand())

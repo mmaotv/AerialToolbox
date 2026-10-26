@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -105,6 +107,9 @@ class MainActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()
 
     private lateinit var settings: AerialSettings
+
+    /** 亮屏恢复 ADB 用的动态广播；仅在「ADB 常开」开启且本页在前台时注册 */
+    private var screenOnReceiver: BroadcastReceiver? = null
     private lateinit var bundled: BundledRelease
     private lateinit var chipAerial: TextView
     private lateinit var chipCleanTv: TextView
@@ -170,6 +175,8 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         resumed = true
+        // 亮屏恢复 ADB：小米待机唤醒后会关掉 ADB，前台时动态注册 SCREEN_ON 兜底
+        if (settings.keepAdb) registerScreenOn()
         // 挂起的弹窗（装完桌面被挤下去那会儿）现在补上
         pendingModal?.let { pending ->
             pendingModal = null
@@ -192,6 +199,7 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         resumed = false
+        unregisterScreenOn()
         super.onPause()
     }
 
@@ -240,6 +248,10 @@ class MainActivity : Activity() {
                 AdbSession.attach(candidate, r)
                 status("调试通道已连接", STATE_OK)
                 // 连接成功不再刷日志：顶栏状态胶囊已经说明了，底部只留真正有内容的操作记录
+
+                // 自助授权写安全设置权限（持久化），并立即把 ADB 拉回常开状态
+                AdbKeepAlive.ensurePermissionGranted(candidate)
+                if (settings.keepAdb) AdbKeepAlive.reenableAdb(this@MainActivity)
 
                 val info = r.deviceInfo()
                 deviceLabel = "${info.model} · Android ${info.sdk}"
@@ -977,9 +989,27 @@ class MainActivity : Activity() {
         settings.keepAdb = !settings.keepAdb
         log("ADB 常开：${if (settings.keepAdb) "开" else "关"}")
         buildActionGrid()
+        if (settings.keepAdb) AdbKeepAlive.reenableAdb(this)
         applyQuietly { ch ->
+            // 连着通道时就顺手把权限也补上，确保开机恢复能生效
+            if (settings.keepAdb) AdbKeepAlive.ensurePermissionGranted(ch)
             ch.shell(AerialSpec.configBroadcast("--ez keep_adb ${settings.keepAdb}"))
         }
+    }
+
+    /** 注册亮屏 / 解锁广播，待机唤醒后把 ADB 重新打开（小米待机后会关 ADB） */
+    private fun registerScreenOn() {
+        if (screenOnReceiver != null) return
+        val r = AdbKeepAlive.screenOnReceiver()
+        screenOnReceiver = r
+        registerReceiver(r, IntentFilter(Intent.ACTION_SCREEN_ON).apply {
+            addAction(Intent.ACTION_USER_PRESENT)
+        })
+    }
+
+    private fun unregisterScreenOn() {
+        screenOnReceiver?.let { runCatching { unregisterReceiver(it) } }
+        screenOnReceiver = null
     }
 
     private fun toggleScreensaver() {

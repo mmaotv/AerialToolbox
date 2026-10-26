@@ -71,6 +71,9 @@ object CleanTvSpec {
 
     fun grantLocation(): String = "pm grant $PKG android.permission.ACCESS_FINE_LOCATION"
 
+    /** 写安全设置权限：让 CleanYourTV 也能在开机/待机后把 ADB 重新打开（与 Aerial 对齐） */
+    fun grantSecureSettings(): String = "pm grant $PKG android.permission.WRITE_SECURE_SETTINGS"
+
     fun disableStock(pkg: String): String = "pm disable-user --user 0 $pkg"
 
     fun enableStock(pkg: String): String = "pm enable --user 0 $pkg"

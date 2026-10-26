@@ -47,6 +47,13 @@ class Patcher:
         with io.open(self.path(rel), "w", encoding="utf-8", newline="") as f:
             f.write(text)
 
+    def write_new(self, rel, text):
+        """写入一个原本不存在的新文件（自动建目录）。用于新增来源上游没有的类。"""
+        full = self.path(rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with io.open(full, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+
     def replace(self, rel, old, new, expect=1, label=""):
         text = self.read(rel)
         if new in text and old not in text:
@@ -448,6 +455,118 @@ def patch_java(p):
     )
 
 
+# ---------------------------------------------------------------- 本机 ADB 常开
+#
+# 小米 / Redmi 电视与盒子关机、待机后会把 ADB 关掉（adb_enabled 置 0），导致配对的
+# MiaoMiaoTV 工具箱连不上本机调试通道。上游 CleanYourTV 自己没有这个逻辑，这里补一个
+# 开机 / 应用更新替换 / 亮屏接收器，复用上游已经声明、并由工具箱安装时 `pm grant` 的
+# WRITE_SECURE_SETTINGS 权限，把 adb_enabled 写回 1。
+#
+# 这是补丁新增的文件，不与上游任何代码冲突；源码不依赖我们的工具箱，纯 AOSP API。
+
+KEEPALIVE_JAVA = """package com.gathin.tvhome;
+
+import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.provider.Settings;
+import android.util.Log;
+
+/**
+ * 让 CleanYourTV 在开机 / 应用被更新替换 / 亮屏时把 ADB 调试通道重新打开。
+ *
+ * 小米 / Redmi 电视与盒子关机、待机后会把 ADB 关掉，导致配对的 MiaoMiaoTV 工具箱连不上本机通道。
+ * 这个接收器复用上游已经声明、并由安装脚本 pm grant 的 WRITE_SECURE_SETTINGS 权限，
+ * 把 Settings.Global.ADB_ENABLED 写回 1（adbd 重启后会读 service.adb.tcp.port /
+ * persist.adb.tcp.port 重新监听 TCP）。
+ *
+ * 这是补丁新增的文件，不与上游任何代码冲突。
+ */
+public class AdbKeepAliveReceiver extends BroadcastReceiver {
+    private static final String TAG = "CYTAdbKeepAlive";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String action = intent == null ? null : intent.getAction();
+        if (action == null) return;
+        // 只处理开机、应用更新替换、亮屏 / 解锁这几类；其余动作忽略。
+        if (!Intent.ACTION_BOOT_COMPLETED.equals(action)
+                && !"android.intent.action.QUICKBOOT_POWERON".equals(action)
+                && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)
+                && !Intent.ACTION_SCREEN_ON.equals(action)
+                && !Intent.ACTION_USER_PRESENT.equals(action)) {
+            return;
+        }
+        // 没有写安全设置权限就什么也做不了（权限由工具箱安装时 pm grant，持久化）。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        // 直接写 1 即可；adbd 重启后会读 service.adb.tcp.port / persist.adb.tcp.port 重新监听 TCP。
+        try {
+            if (Settings.Global.getInt(context.getContentResolver(), Settings.Global.ADB_ENABLED, 0) != 1) {
+                Settings.Global.putInt(context.getContentResolver(), Settings.Global.ADB_ENABLED, 1);
+                Log.i(TAG, "ADB 被关掉了，已重新打开");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "无法重新打开 ADB", e);
+        }
+    }
+}
+"""
+
+
+def patch_keepalive(p):
+    rel = "app/src/main/java/com/gathin/tvhome/AdbKeepAliveReceiver.java"
+    if os.path.isfile(p.path(rel)):
+        p.applied.append(rel + ": 接收器已存在（已应用）")
+    else:
+        p.write_new(rel, KEEPALIVE_JAVA)
+        p.applied.append(rel + ": 新增 ADB 常开开机接收器")
+
+    mf = "app/src/main/AndroidManifest.xml"
+    text = p.read(mf)
+    if "RECEIVE_BOOT_COMPLETED" not in text:
+        text = text.replace(
+            '<uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />',
+            '<uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />\n'
+            '    <!-- 本机 ADB 调试通道常开：开机 / 亮屏后由 AdbKeepAliveReceiver 重新打开 -->\n'
+            '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />',
+            1,
+        )
+        p.applied.append(mf + ": 加 RECEIVE_BOOT_COMPLETED 权限")
+    else:
+        p.applied.append(mf + ": RECEIVE_BOOT_COMPLETED 已存在（已应用）")
+
+    if "AdbKeepAliveReceiver" not in text:
+        text = text.replace(
+            "    </application>",
+            '    <!-- 本机 ADB 常开：开机 / 应用更新 / 亮屏后把 adb_enabled 写回 1 -->\n'
+            '    <receiver\n'
+            '        android:name=".AdbKeepAliveReceiver"\n'
+            '        android:enabled="true"\n'
+            '        android:exported="true">\n'
+            '        <intent-filter>\n'
+            '            <action android:name="android.intent.action.BOOT_COMPLETED" />\n'
+            '            <action android:name="android.intent.action.QUICKBOOT_POWERON" />\n'
+            '            <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />\n'
+            '            <action android:name="android.intent.action.SCREEN_ON" />\n'
+            '            <action android:name="android.intent.action.USER_PRESENT" />\n'
+            '        </intent-filter>\n'
+            '    </receiver>\n'
+            '\n    </application>',
+            1,
+        )
+        p.applied.append(mf + ": 注册 AdbKeepAliveReceiver")
+    else:
+        p.applied.append(mf + ": AdbKeepAliveReceiver 已注册（已应用）")
+    p.write(mf, text)
+
+
 IMPORTS = {
     "HomeKeyService.java": ["android.os.Build", "android.content.Context"],
     "MainActivity.java": ["android.content.res.Configuration"],
@@ -498,6 +617,7 @@ def main():
     patch_gradle(p)
     patch_fonts(p)
     patch_java(p)
+    patch_keepalive(p)
     ensure_imports(p)
     ok = p.report()
     return 0 if ok else 1
