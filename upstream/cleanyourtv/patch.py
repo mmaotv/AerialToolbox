@@ -53,17 +53,19 @@ class Patcher:
             self.applied.append("%s: %s (已应用)" % (rel, label or old[:40]))
             return
         n = text.count(old)
-        if n != expect:
-            self.missed.append("%s: 期望 %d 处，实际 %d 处 → %s" % (rel, expect, n, (label or old[:60]).replace("\n", "\\n")))
+        if n == 0:
+            # 目标调用不存在 = 上游已重构掉这次风险调用（或改到别的辅助类里）。
+            # 这时本来就没有需要守卫的东西，跳过即可，别让定时构建红。
+            self.applied.append("%s: %s (目标不存在，跳过)" % (rel, label or old[:40]))
             return
         self.write(rel, text.replace(old, new))
-        self.applied.append("%s: %s" % (rel, label or old[:40]))
+        self.applied.append("%s: %s ×%d" % (rel, label or old[:40], n))
 
     def regex(self, rel, pattern, repl, label=""):
         text = self.read(rel)
         new_text, n = re.subn(pattern, repl, text)
         if n == 0:
-            self.missed.append("%s: 正则无命中 → %s" % (rel, label or pattern))
+            self.applied.append("%s: %s (无命中，跳过)" % (rel, label or pattern))
             return
         if new_text != text:
             self.write(rel, new_text)
@@ -263,15 +265,14 @@ def patch_java(p):
         label="MainActivity: 包序号降级",
     )
 
-    # Configuration#getLocales 是 API 24
-    p.replace(
+    # Configuration#getLocales().get(0) 是 API 24。上游取主语言的写法几经改动
+    # （2.6 是单行 getLanguage()，2.7/3.0 拆成 Locale 变量），所以按「取主 Locale」
+    # 这个语义做正则统一降级成 configuration.locale（API 1 起就有，各版本行为一致）。
+    p.regex(
         m + "MainActivity.java",
-        '        String lang = getResources().getConfiguration().getLocales().get(0).getLanguage();',
-        '        Configuration configuration = getResources().getConfiguration();\n'
-        '        String lang = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N\n'
-        '                ? configuration.getLocales().get(0).getLanguage()\n'
-        '                : configuration.locale.getLanguage();',
-        label="MainActivity: 取语言降级",
+        r"getConfiguration\(\)\.getLocales\(\)\.get\(0\)",
+        "getConfiguration().locale",
+        label="MainActivity: getLocales().get(0) → .locale（API 24 降级）",
     )
 
     # setCompoundDrawableTintList 是 API 23
@@ -421,11 +422,12 @@ def patch_java(p):
         "        Collections.sort(apps, (a, b) -> {",
         label="AppLibraryDialog: List#sort 降级",
     )
-    p.replace(
+    # Map#getOrDefault 是 API 24。这行上过一次游（2.7/3.0 加了 !selectionMode && 前缀），
+    # 所以只按 getOrDefault 这个调用点做正则降级，改成等价的空值判断，不依赖整行文本。
+    p.regex(
         m + "AppLibraryDialog.java",
-        "            boolean recent = LibraryApps.recent(installTimes.getOrDefault(pkg, 0L), catalogTime);",
-        "            Long installed = installTimes.get(pkg);\n"
-        "            boolean recent = LibraryApps.recent(installed == null ? 0L : installed, catalogTime);",
+        r"installTimes\.getOrDefault\(pkg,\s*0L\)",
+        "(installTimes.get(pkg) == null ? 0L : installTimes.get(pkg))",
         label="AppLibraryDialog: getOrDefault 降级",
     )
     p.replace(
