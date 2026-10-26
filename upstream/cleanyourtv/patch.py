@@ -542,7 +542,9 @@ def patch_keepalive(p):
     else:
         p.applied.append(mf + ": RECEIVE_BOOT_COMPLETED 已存在（已应用）")
 
-    if "AdbKeepAliveReceiver" not in text:
+    # 注意：上面那行权限注释里也出现了 "AdbKeepAliveReceiver" 这个子串，
+    # 必须用「实际的 receiver 元素标记」来判重，否则会被注释误判成已注册而跳过插入。
+    if 'android:name=".AdbKeepAliveReceiver"' not in text:
         text = text.replace(
             "    </application>",
             '    <!-- 本机 ADB 常开：开机 / 应用更新 / 亮屏后把 adb_enabled 写回 1 -->\n'
