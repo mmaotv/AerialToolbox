@@ -3,7 +3,7 @@ package com.miaomiaotv.aerial.core
 /**
  * CleanYourTV 桌面的固定标识与指令模板。
  *
- * 对齐上游 `launcher/build-and-install.sh`（v2.6.0）。与 Aerial 的区别要说清楚：
+ * 对齐上游 `launcher/build-and-install.sh`（v3.0.0）。与 Aerial 的区别要说清楚：
  *  - 上游**不发布 APK**，安装包由我们自己的 CI 代构建后挂在 AerialToolbox 仓库的 `cyt-v*` Release；
  *  - 上游 minSdk 是 26，我们用 `upstream/cleanyourtv/patch.py` 打到 22（Android 5.1）后自行构建；
  *  - 安装流程会 `pm disable-user` 原桌面，顺序错一步电视就没有桌面，必须照上游的顺序来。

@@ -27,7 +27,7 @@ enum class Target(
         pkg = AerialSpec.PKG,
         minSdk = 21,
         bundledDir = "bundled",
-        installHint = "内置 v1.30，离线直装"
+        installHint = "内置 v1.52，离线直装"
     ),
     CLEAN_TV(
         key = "clean_tv",
@@ -35,7 +35,7 @@ enum class Target(
         pkg = CleanTvSpec.PKG,
         minSdk = CleanTvSpec.MIN_SDK,
         bundledDir = "bundled-cyt",
-        installHint = "内置 v2.6，离线直装（支持 Android 5.1+）"
+        installHint = "内置 v3.0.0，离线直装（支持 Android 5.1+）"
     );
 
     val isAerial: Boolean get() = this == AERIAL
