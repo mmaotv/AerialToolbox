@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>桌面工具箱 AerialToolbox — 给电视 / 盒子一键安装开源桌面</title>
-<meta name="description" content="桌面工具箱 AerialToolbox：无需电脑、无需 root，给 Android 电视 / 盒子一键安装 Aerial 与 CleanYourTV 开源桌面并接管主页键。内置离线包，电视端 + 手机端双形态。">
+<meta name="description" content="桌面工具箱 AerialToolbox：无需电脑、无需 root，给 Android 电视 / 盒子一键安装 Aerial 与 CleanYourTV 开源桌面并接管主页键。电视端 + 手机端，手机填 IP 即可直连，全程不用电脑。">
 <meta property="og:title" content="桌面工具箱 AerialToolbox">
-<meta property="og:description" content="无需电脑、无需 root，给电视/盒子一键安装开源桌面并接管主页键。">
+<meta property="og:description" content="无需电脑、无需 root，给电视/盒子一键安装开源桌面并接管主页键。手机填 IP 即可直连。">
 <meta property="og:type" content="website">
 <style>
   :root{
@@ -48,16 +48,16 @@
   .nav-gh:hover{border-color:var(--blue)}
   @media(max-width:720px){.nav-links{display:none}}
   /* HERO */
-  header.hero{padding:74px 0 56px;text-align:center}
+  header.hero{padding:70px 0 52px;text-align:center}
   .badges{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
   .badge{font-size:12px;padding:5px 12px;border-radius:999px;background:var(--glass);
     border:1px solid var(--glass-bd);color:var(--ink-dim)}
   .badge b{color:var(--ink)}
   h1{font-size:clamp(34px,6vw,62px);line-height:1.08;font-weight:800;letter-spacing:-.5px}
   h1 .accent{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sub{margin:20px auto 6px;max-width:760px;font-size:clamp(16px,2.2vw,20px);color:var(--ink-dim)}
+  .sub{margin:20px auto 6px;max-width:740px;font-size:clamp(16px,2.2vw,20px);color:var(--ink-dim)}
   .sub-en{color:var(--ink-faint);font-size:14.5px;max-width:740px;margin:0 auto}
-  .cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:38px}
+  .cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:36px}
   .btn{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:16px;
     padding:15px 28px;border-radius:14px;transition:.18s transform,.18s box-shadow,.18s border-color}
   .btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 30px rgba(123,108,255,.35)}
@@ -65,9 +65,11 @@
   .btn-ghost{background:var(--glass);border:1px solid var(--glass-bd);color:var(--ink)}
   .btn-ghost:hover{border-color:var(--blue);transform:translateY(-2px)}
   .btn small{display:block;font-size:11.5px;font-weight:500;opacity:.85}
+  .hero-note{margin-top:18px;font-size:13.5px;color:var(--ink-faint)}
+  .hero-note b{color:var(--cyan)}
   /* SECTION */
-  section{padding:62px 0}
-  .sec-head{text-align:center;margin-bottom:42px}
+  section{padding:58px 0}
+  .sec-head{text-align:center;margin-bottom:38px}
   .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--violet);font-weight:700}
   h2{font-size:clamp(26px,4vw,38px);margin-top:10px;font-weight:800}
   .sec-sub{color:var(--ink-dim);margin-top:12px;max-width:680px;margin-left:auto;margin-right:auto}
@@ -85,7 +87,45 @@
   .card .h3-en{font-size:12.5px;color:var(--ink-faint);font-weight:500;margin-bottom:12px}
   .card p{color:var(--ink-dim);font-size:14.5px}
   .card p .en{display:block;color:var(--ink-faint);font-size:12.5px;margin-top:6px}
-  /* compare two apps */
+  /* STEPS */
+  .step{background:var(--glass);border:1px solid var(--glass-bd);border-radius:var(--radius);padding:24px}
+  .step .n{font-size:12.5px;font-weight:800;letter-spacing:2px;color:var(--violet)}
+  .step h3{font-size:18px;margin:8px 0 8px}
+  .step p{color:var(--ink-dim);font-size:14px}
+  .step p b{color:var(--ink)}
+  /* ADB TABLE */
+  .adb{margin-top:14px;border:1px solid var(--glass-bd);border-radius:var(--radius);
+    overflow:hidden;background:rgba(255,255,255,.04)}
+  .adb-head{display:grid;grid-template-columns:250px 1fr;gap:18px;padding:13px 22px;
+    background:rgba(255,255,255,.06);font-size:12.5px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .adb-row{display:grid;grid-template-columns:250px 1fr;gap:18px;padding:15px 22px;
+    border-top:1px solid rgba(255,255,255,.07);font-size:14.5px;transition:.15s background}
+  .adb-row:first-of-type{border-top:0}
+  .adb-row:hover{background:rgba(255,255,255,.035)}
+  .adb-brand{color:var(--ink);font-weight:600}
+  .adb-brand span{font-weight:400;color:var(--ink-faint);font-size:12.5px}
+  .adb-path{color:var(--ink-dim)}
+  .adb-path b{color:var(--ink);font-weight:600}
+  @media(max-width:780px){
+    .adb-head{display:none}
+    .adb-row{grid-template-columns:1fr;gap:5px;padding:14px 18px}
+  }
+  .tips{list-style:none;margin-top:20px;display:flex;flex-direction:column;gap:10px}
+  .tips li{display:flex;gap:10px;font-size:14px;color:var(--ink-dim)}
+  .tips .mk{color:var(--cyan);flex:none;margin-top:1px}
+  .tips b{color:var(--ink)}
+  /* CALLOUT */
+  .callout{margin-top:26px;display:flex;gap:18px;align-items:flex-start;padding:26px 28px;
+    border-radius:20px;background:linear-gradient(140deg,rgba(10,132,255,.16),rgba(40,214,224,.07));
+    border:1px solid rgba(10,132,255,.32)}
+  .callout .ci{font-size:28px;line-height:1.1;flex:none}
+  .callout h4{font-size:18px;margin-bottom:7px}
+  .callout p{color:var(--ink-dim);font-size:14.5px}
+  .callout p b{color:var(--ink)}
+  .callout p + p{margin-top:8px}
+  @media(max-width:640px){.callout{flex-direction:column;gap:12px;padding:22px}}
+  /* app cards */
   .app-card{background:linear-gradient(160deg,rgba(10,132,255,.10),rgba(123,108,255,.06));
     border:1px solid var(--glass-bd);border-radius:var(--radius);padding:30px}
   .app-card h3{font-size:22px;display:flex;align-items:center;gap:10px}
@@ -94,12 +134,8 @@
   .app-card li{display:flex;gap:11px;font-size:14.5px;color:var(--ink-dim)}
   .app-card li b{color:var(--ink);font-weight:600}
   .app-card li .mk{color:var(--cyan);flex:none;margin-top:2px}
-  /* upstream */
-  .up-card{text-align:center}
-  .up-card h3{font-size:21px}
-  .up-card .logo{width:64px;height:64px;border-radius:16px;margin:0 auto 16px;
-    background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:30px}
-  .up-card p{color:var(--ink-dim);font-size:14px;margin-top:8px}
+  .mini-note{text-align:center;color:var(--ink-faint);font-size:13.5px;margin-top:26px}
+  .mini-note b{color:var(--ink-dim)}
   /* screenshots */
   .shots{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
   @media(max-width:860px){.shots{grid-template-columns:1fr}}
@@ -110,7 +146,7 @@
   .shot .cap b{color:var(--ink)}
   /* download */
   .dl{background:linear-gradient(160deg,rgba(123,108,255,.14),rgba(40,214,224,.07));
-    border:1px solid var(--glass-bd);border-radius:24px;padding:46px 30px;text-align:center}
+    border:1px solid var(--glass-bd);border-radius:24px;padding:44px 30px;text-align:center}
   .dl h2{margin-bottom:8px}
   .dl .row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:30px}
   .dl .pill{display:flex;flex-direction:column;align-items:flex-start;gap:4px;
@@ -144,10 +180,10 @@
       <span>桌面工具箱<br><small>AerialToolbox</small></span>
     </a>
     <div class="nav-links">
-      <a href="#why">为什么</a>
+      <a href="#start">怎么开始</a>
+      <a href="#adb">开 ADB</a>
+      <a href="#why">能做什么</a>
       <a href="#apps">两个应用</a>
-      <a href="#desktops">上游桌面</a>
-      <a href="#shots">界面</a>
       <a href="#download">下载</a>
     </div>
     <a class="nav-gh" href="https://github.com/mmaotv/AerialToolbox" target="_blank" rel="noopener">
@@ -162,64 +198,147 @@
     <div class="badges">
       <span class="badge">无需 <b>root</b></span>
       <span class="badge">无需 <b>电脑</b></span>
+      <span class="badge">手机填 IP <b>直连</b></span>
       <span class="badge">内置<b>离线包</b></span>
       <span class="badge"><b>MIT</b> 开源</span>
-      <span class="badge">minSdk <b>21</b></span>
     </div>
     <h1>给电视 / 盒子，<br><span class="accent">一键安装开源桌面</span></h1>
     <p class="sub">桌面工具箱把繁琐的 ADB 命令固化进 APK：安装、授权、接管主页键、屏保、验收——全自动完成。支持 Aerial 与 CleanYourTV 两款高质量开源桌面。</p>
-    <p class="sub-en">Install open-source TV launchers (Aerial / CleanYourTV) on Android TV boxes and take over the HOME button — no PC, no root. Ships as a TV app and a phone app.</p>
+    <p class="sub-en">Install open-source TV launchers (Aerial / CleanYourTV) on Android TV boxes and take over the HOME button — no PC, no root. TV app + phone app.</p>
     <div class="cta">
-      <a class="btn btn-primary" href="#download">↓ 下载桌面工具箱 <small>TV 端 + 手机端 · 免费开源</small></a>
-      <a class="btn btn-ghost" href="https://github.com/mmaotv/AerialToolbox" target="_blank" rel="noopener">在 GitHub 上查看</a>
+      <a class="btn btn-primary" href="#download">↓ 下载桌面工具箱 <small>电视端 + 手机端 · 免费开源</small></a>
+      <a class="btn btn-ghost" href="#start">看看怎么开始</a>
     </div>
+    <p class="hero-note">手机上填电视 IP 就能连，<b>全程不需要电脑、不需要 USB 线</b></p>
   </div>
 </header>
+
+<section id="start">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Get started</div>
+      <h2>三步开始，全程不用电脑</h2>
+      <p class="sec-sub">唯一的前提是电视上把 ADB 打开——这一步只要遥控器。之后装电视端自己装，或装手机端填 IP 远程装，都不需要电脑。</p>
+      <p class="sec-sub-en">All you need is ADB enabled on the TV (remote only). After that, install on the TV or straight from your phone by typing its IP.</p>
+    </div>
+    <div class="grid g3">
+      <div class="step">
+        <div class="n">STEP 01</div>
+        <h3>打开电视的 ADB</h3>
+        <p>进「设置 → 关于」，连按版本号 7 次开开发者选项，再打开 <b>USB 调试 / ADB 调试</b>。各品牌入口见下表。</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 02</div>
+        <h3>装电视端或手机端</h3>
+        <p>只装一个也行。电视端装在盒子上自己装；手机端装在手机上，<b>填电视 IP 就能连</b>。</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 03</div>
+        <h3>点安装，然后验收</h3>
+        <p>选 Aerial 或 CleanYourTV → 一键安装 → 点「验收检查」，通过就说明主页键已经接管成功。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="adb" style="padding-top:8px">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Enable ADB</div>
+      <h2>各品牌电视 / 盒子打开 ADB 的方式</h2>
+      <p class="sec-sub">打开后设备自己就在 5555 端口监听，手机端直接连即可。隐藏入口会随固件版本变动，以下路径以实机为准。</p>
+      <p class="sec-sub-en">Once enabled, adbd listens on port 5555 — your phone can connect directly. Hidden entries vary by firmware.</p>
+    </div>
+
+    <div class="adb">
+      <div class="adb-head"><div>品牌 / 机型</div><div>打开路径</div></div>
+      <div class="adb-row">
+        <div class="adb-brand">小米 / Redmi 电视<br><span>小米盒子</span></div>
+        <div class="adb-path">设置 → 关于 → <b>产品型号</b>（连按确认 7 次）→ 返回 设置 → <b>账号与安全 → ADB 调试 → 允许</b></div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">索尼 BRAVIA<br><span>原生 Android TV / Google TV、NVIDIA Shield</span></div>
+        <div class="adb-path">设置 → 系统（老机型在「设备偏好设置」）→ 关于 → 连按 <b>版本号 / Android TV OS 版本</b> 7 次 → 开发者选项 → <b>USB 调试</b>（有的叫「网络调试」）</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">TCL / 雷鸟 / 海尔</div>
+        <div class="adb-path">设置 → 关于（本机信息）→ 遥控器依次按 <b>上 下 左 右</b>（间隔小于 1 秒）→ 底部出现「更多」→ 打开 ADB</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">海信 <span>（Android TV 系统）</span></div>
+        <div class="adb-path">设置 → 关于 → <b>版本号</b>连按 7 次 → 开发者选项 → USB 调试</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">海信 <span>（VIDAA 系统）</span></div>
+        <div class="adb-path">声音设置 → 平衡 → 输入 <b>0532</b> 进工厂模式找 ADB（多数机型不开放，装不了就是装不了）</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">创维 / 酷开</div>
+        <div class="adb-path">本机信息页输 <b>上上下下左右左右</b>；或 设置 → 关于电视 → 软件版本号连按 7 次 → 开发者选项</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">华为智慧屏</div>
+        <div class="adb-path">设置 → 关于本机 → 版本号连按 7 次 → 系统和更新 → 开发人员选项 → <b>USB 调试 + 启用 ADB</b></div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">长虹 / 康佳 / 乐视</div>
+        <div class="adb-path">长虹：菜单 → 情景模式 → 标准模式 → 输 <b>0816</b>；康佳：按菜单键输 <b>2008</b>；乐视：信号源 → 输 <b>2580</b> → ADB 调试 → 重启</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">天猫魔盒 / 当贝<br><span>外贸盒子 HK1 / X96 / Mecool</span></div>
+        <div class="adb-path">设置 → 关于（系统信息）连按 7 次 → 开发者选项 → USB 调试；外贸盒子多为原生 Android TV 通用路径</div>
+      </div>
+    </div>
+
+    <ul class="tips">
+      <li><span class="mk">◆</span><span><b>表里没有你的品牌？</b>Android TV 通用三步：设置 → 关于 → 版本号连按 7 次 → 回设置进「开发者选项」→ 打开「USB 调试 / ADB 调试」。国产 OTT 盒子常在「本机信息」页按方向键或输密码弹隐藏菜单。</span></li>
+      <li><span class="mk">◆</span><span><b>小米系重启 / 待机后会自动关掉 ADB</b>，表现就是"昨天能连今天连不上"。本工具的「ADB 常开」正是解决这个——首次授权后，开机 / 亮屏会把开关写回来。</span></li>
+      <li><span class="mk">◆</span><span><b>Android TV 13+</b> 部分新机改成「无线调试（配对码）」，端口随机、不再直接连 5555。这类机型请在开发者选项里找「网络调试 / ADB over network」并确认端口是 5555。</span></li>
+    </ul>
+
+    <div class="callout">
+      <div class="ci">📱</div>
+      <div>
+        <h4>手机端：填个 IP 就能连，完全不需要电脑</h4>
+        <p>Android 的 <b>adbd</b> 是设备内部常驻的调试服务。电视一打开 ADB，它自己就在 <b>5555</b> 上监听——手机端只是扮演"另一台 adb 客户端"，所以跳过电脑直连完全可行。</p>
+        <p>不需要 USB 线，不需要 <b>adb tcpip 5555</b>，也不需要电脑上装任何工具。只要手机和电视在<b>同一个 Wi-Fi / 路由器</b>下，在手机上输入电视 IP 即可。</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section id="why">
   <div class="wrap">
     <div class="sec-head">
       <div class="kicker">Why</div>
       <h2>它解决什么</h2>
-      <p class="sec-sub">官方安装说明要在电脑上敲一长串 adb 命令，任何一步顺序错了，装得上却主页键回不去。这个工具把这些一次性固化好，还专门解决了一批真实痛点。</p>
-      <p class="sec-sub-en">The official guide is a wall of adb commands on a PC. One wrong step and the HOME button won't return. We bake the whole flow in — and fix real-world edge cases.</p>
+      <p class="sec-sub">官方安装说明是一长串 adb 命令，任何一步顺序错了，装得上却主页键回不去。这个工具把整套流程固化好，还专门解决了一批真实痛点。</p>
+      <p class="sec-sub-en">The official guide is a wall of adb commands. One wrong step and HOME won't return. We bake the whole flow in — and fix real-world edge cases.</p>
     </div>
-    <div class="grid g3">
+    <div class="grid g2">
       <div class="card">
         <div class="ico">📦</div>
         <h3>内置离线安装包</h3>
         <div class="h3-en">Bundled offline APKs</div>
-        <p>电视连不上 GitHub？官方安装包直接内置在 APK 里，安装全程不联网。<span class="en">Launcher APKs are bundled inside the app — installs work fully offline, even when the box can't reach GitHub.</span></p>
+        <p>电视连不上 GitHub？官方安装包直接内置在 APK 里，安装全程不联网。<span class="en">Launcher APKs are bundled inside the app — installs work fully offline.</span></p>
       </div>
       <div class="card">
         <div class="ico">📱</div>
         <h3>手机远程也能装</h3>
         <div class="h3-en">Install from your phone</div>
-        <p>手边没电脑？装手机端，填电视 IP 或用局域网扫描，远程完成安装、遥控、截图。<span class="en">No PC handy? Use the phone app: type the TV IP or scan the LAN, then install remotely with a built-in remote & screenshot.</span></p>
+        <p>手边没电脑？手机端填电视 IP 或扫局域网即可远程安装，还自带遥控器和截图。<span class="en">No PC needed: type the TV IP or scan the LAN, then install remotely with a built-in remote &amp; screenshot.</span></p>
       </div>
       <div class="card">
         <div class="ico">🛡️</div>
         <h3>接管 / 修复 / 验收</h3>
         <div class="h3-en">Take over · Repair · Verify</div>
-        <p>装完主页键回原桌面？"修复接管"只重跑授权；"验收检查"按一次主页键确认进的是新桌面。<span class="en">HOME button still returns to stock? "Repair" re-runs grants only; "Verify" presses HOME and checks the foreground window.</span></p>
+        <p>装完主页键回原桌面？「修复接管」只重跑授权；「验收检查」按一次主页键确认进的是新桌面。<span class="en">HOME still returns to stock? Repair re-runs grants only; Verify presses HOME and checks the foreground window.</span></p>
       </div>
       <div class="card">
         <div class="ico">🔌</div>
         <h3>适配难搞的盒子</h3>
         <div class="h3-en">Tricky boxes handled</div>
-        <p>TCL / 雷鸟拒绝 ADB 安装 → 走 guard 通道；小米待机后 ADB 被关 → "ADB 常开"自动开回。<span class="en">TCL/FFALCON block ADB installs → guard channel; Xiaomi kills ADB on sleep → "Keep ADB" re-enables it.</span></p>
-      </div>
-      <div class="card">
-        <div class="ico">🔄</div>
-        <h3>自动版本检测</h3>
-        <div class="h3-en">Auto update checks</div>
-        <p>"桌面更新"进页面才联网，比对本仓库代构建发行版，展示更新日志后再下载。<span class="en">"Desktop Update" checks online only on demand, compares against our built releases, and shows the changelog before downloading.</span></p>
-      </div>
-      <div class="card">
-        <div class="ico">🧹</div>
-        <h3>一键还原卸载</h3>
-        <div class="h3-en">Clean restore & uninstall</div>
-        <p>CleanYourTV 会重新启用原桌面并把主页还回去，可一并卸载，不留残影。<span class="en">CleanYourTV re-enables the original launcher and gives HOME back, then optionally uninstalls — nothing left behind.</span></p>
+        <p>TCL / 雷鸟拒绝 ADB 安装 → 走 guard 通道；小米待机后 ADB 被关 → 「ADB 常开」自动开回。<span class="en">TCL/FFALCON block ADB installs → guard channel; Xiaomi kills ADB on sleep → "Keep ADB" re-enables it.</span></p>
       </div>
     </div>
   </div>
@@ -247,7 +366,7 @@
       <div class="app-card">
         <h3>📱 手机端 <span class="tag">Phone</span></h3>
         <ul>
-          <li><span class="mk">▸</span><span><b>装在手机上</b>，填电视 IP（默认 5555）或扫描局域网</span></li>
+          <li><span class="mk">▸</span><span><b>装在手机上</b>，填电视 IP（默认 5555）或扫描局域网，<b>不需要电脑</b></span></li>
           <li><span class="mk">▸</span><span>连过的设备存成历史，点一下就连</span></li>
           <li><span class="mk">▸</span><span>主页显示型号 / 系统版本 / 当前桌面 / 已装版本</span></li>
           <li><span class="mk">▸</span><span>内置<b>遥控器</b>（方向/确认/主页/返回/菜单/电源）与<b>截图</b></span></li>
@@ -255,29 +374,7 @@
         </ul>
       </div>
     </div>
-  </div>
-</section>
-
-<section id="desktops">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">Two upstreams</div>
-      <h2>两款上游桌面，随时切换</h2>
-      <p class="sec-sub">两个上游互斥，一次只接管一个。界面、图标、字体都按 Aerial 的 tvOS 设计语言统一。</p>
-      <p class="sec-sub-en">Two mutually exclusive launchers, one taken over at a time. Same tvOS visual language throughout.</p>
-    </div>
-    <div class="grid g2">
-      <div class="card up-card">
-        <div class="logo">🛰️</div>
-        <h3>Aerial</h3>
-        <p>tvOS 风格，航拍屏保，无障碍守护兜底。<br>官方 Release 直接内置，离线可装，更新查上游。<br><span style="color:var(--ink-faint)">内置版本 v1.52</span></p>
-      </div>
-      <div class="card up-card">
-        <div class="logo">🍎</div>
-        <h3>CleanYourTV</h3>
-        <p>Apple TV 风格，dock + 玻璃高光，遥控器按键服务。<br>上游只发源码，由本仓库代构建并降到 Android 5.1。<br><span style="color:var(--ink-faint)">内置版本 v3.0.0</span></p>
-      </div>
-    </div>
+    <p class="mini-note">内置 <b>Aerial v1.52</b>（tvOS 航拍风、屏保）· <b>CleanYourTV v3.0.0</b>（Apple TV dock 风，上游只发源码，由本仓库代构建并降到 Android 5.1）</p>
   </div>
 </section>
 
@@ -314,7 +411,7 @@
           <a href="https://github.com/mmaotv/AerialToolbox/releases/download/v1.3.4/AerialToolbox-1.3.4.apk" target="_blank" rel="noopener">AerialToolbox-1.3.4.apk ↓</a>
         </div>
         <div class="pill">
-          <span class="t">📱 手机端（远程控制电视）</span>
+          <span class="t">📱 手机端（填 IP 远程装）</span>
           <span class="v">v1.0.2</span>
           <a href="https://github.com/mmaotv/AerialToolbox/releases/download/phone-v1.0.2/AerialToolbox-Phone-1.0.2.apk" target="_blank" rel="noopener">AerialToolbox-Phone-1.0.2.apk ↓</a>
         </div>
