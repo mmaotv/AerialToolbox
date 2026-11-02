@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  主页：与 TV 端主界面同一套版式语汇——品牌标 + 标题顶栏、Fill 信息面板、
+  手机主页：与 TV 端同一套版式语汇——品牌标 + 标题顶栏、Fill 面板、
   胶囊目标切换、主/次按钮（按压反白）、面板日志区。
 
-  排布规则（手机屏高有限，靠"分组"而不是靠"堆"，也不是靠压缩间距）：
-    · 顶部一块面板装「装什么 + 怎么装 + 装到哪台设备」：目标胶囊 → 安装选项 → 设备信息；
-      合成一块比拆成三块省约 40dp，而且选项就在它作用的目标下面，语义更准。
-    · 按钮按语义分成「桌面操作」「更新与工具」两组，各带一行小标题当分隔；
-      组内行距 8dp、列距 12dp，组间 12dp。按钮高度统一 46dp。
-    · 日志固定 120dp 钉在底部。
+  纵向顺序按「用户打开后想做什么」排，而不是按「功能模块」排：
+    1) 装什么    目标胶囊（Aerial / CleanYourTV）
+    2) 装到哪台  设备 + 当前默认桌面 + 连接状态
+    3) 主操作    一键安装（全宽主按钮，首屏就能点到）
+    4) 次操作    验收 / 修复接管
+    5) 安装选项  默认折叠（三个技术开关，新用户大概率不懂，展开才显示）
+    6) 工具      桌面更新 / 更新手机端 / 遥控器 / 截图
+    7) 日志      默认折叠成一行，出错自动展开
 
-  纵向分两段而不是整页一个权重：
-    控制区（ScrollView，weight=1）——装得下正好铺满，装不下就滚动；
-    日志区（固定高度）——不参与上面那堆控件的空间竞争。
-  这样小屏手机上按钮不会被挤出屏幕，日志也不会被压成一条缝。
+  旧版把「安装选项」放在一键安装之前，用户第一眼面对的
+  「通道：guard / ADB 常开 / 屏保接管」三个不懂的开关，而真正的主动作被压到第三屏区。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -79,8 +79,8 @@
             </LinearLayout>
 
             <!--
-              一块面板装三件事：目标（装什么）→ 安装选项（怎么装）→ 设备（装到哪）。
-              标签内联、状态与版本并排，都是为了给下面的按钮组腾高度。
+              一块面板装三件事：目标（装什么）→ 设备（装到哪）→ 状态。
+              标签内联、状态与版本并排，都是为了给下面的按钮腾高度。
             -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -122,55 +122,11 @@
                         android:textColor="@color/text_secondary" />
                 </LinearLayout>
 
-                <!-- 安装选项：与电视端那三张开关卡片一一对应，跟随上面的目标变文案 -->
-                <TextView
-                    style="@style/Text.Caption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/section_options" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/opt_1"
-                        style="@style/Chip"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_chip"
-                        android:textColor="@color/text_secondary" />
-
-                    <TextView
-                        android:id="@+id/opt_2"
-                        style="@style/Chip"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_chip"
-                        android:textColor="@color/text_secondary" />
-
-                    <TextView
-                        android:id="@+id/opt_3"
-                        style="@style/Chip"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_chip"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
-
                 <!-- 设备：标签内联，值吃掉剩余宽度 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="13dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -193,23 +149,31 @@
                         android:textSize="15sp" />
                 </LinearLayout>
 
-                <TextView
-                    style="@style/Text.Caption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/current_home" />
-
-                <TextView
-                    android:id="@+id/tv_home"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/unknown"
-                    android:textColor="@color/accent"
-                    android:textSize="14sp" />
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Text.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/current_home" />
+
+                    <TextView
+                        android:id="@+id/tv_home"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/unknown"
+                        android:textColor="@color/accent"
+                        android:textSize="13sp" />
+                </LinearLayout>
 
                 <!-- 连接状态与自身版本并排，省一整行 -->
                 <LinearLayout
@@ -241,40 +205,15 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 桌面操作 -->
-            <TextView
-                style="@style/Text.Section"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/section_actions" />
-
-            <LinearLayout
+            <!-- 主操作：全宽，单独一行，首屏第一眼就能点到 -->
+            <Button
+                android:id="@+id/btn_install"
+                style="@style/Btn.Primary"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btn_install"
-                    style="@style/Btn.Primary"
-                    android:layout_width="0dp"
-                    android:layout_height="46dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:text="@string/btn_install"
-                    android:textSize="15sp" />
-
-                <Button
-                    android:id="@+id/btn_restore"
-                    style="@style/Btn.Ghost"
-                    android:layout_width="0dp"
-                    android:layout_height="46dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="@string/btn_restore"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/btn_install"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -285,6 +224,8 @@
                 <Button
                     android:id="@+id/btn_verify"
                     style="@style/Btn.Ghost"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:layout_width="0dp"
                     android:layout_height="46dp"
                     android:layout_marginEnd="6dp"
@@ -295,15 +236,110 @@
                 <Button
                     android:id="@+id/btn_repair"
                     style="@style/Btn.Ghost"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:layout_width="0dp"
                     android:layout_height="46dp"
                     android:layout_marginStart="6dp"
                     android:layout_weight="1"
                     android:text="@string/btn_repair"
                     android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/btn_restore"
+                    style="@style/Btn.Ghost"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_restore"
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- 更新与工具：桌面更新装到电视，更新手机端升级自己 -->
+            <!--
+              安装选项：默认折叠。
+              折叠态把三个开关的状态压成一行摘要，信息不丢，但不占用户的第一眼。
+            -->
+            <LinearLayout
+                android:id="@+id/options_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp">
+
+                <TextView
+                    style="@style/Text.Section"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/section_options" />
+
+                <TextView
+                    android:id="@+id/tv_options_summary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tv_options_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/expand"
+                    android:textColor="@color/accent"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/options_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/opt_1"
+                    style="@style/Chip"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_chip"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/opt_2"
+                    style="@style/Chip"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_chip"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/opt_3"
+                    style="@style/Chip"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_chip"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <!-- 工具：桌面更新装到电视，更新手机端升级自己 -->
             <TextView
                 style="@style/Text.Section"
                 android:layout_width="wrap_content"
@@ -388,13 +424,39 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- ══ 日志区：固定高度，永远在底部，不参与上面那堆控件的空间竞争 ══ -->
-    <TextView
-        style="@style/Text.Section"
-        android:layout_width="wrap_content"
+    <!--
+      ══ 日志区：默认折叠成一行标题 ══
+      它 99% 时间是空的，却常驻 120dp 抢走首屏底部空间。
+      出问题时自动展开（见 DashboardActivity.appendLog），平时留一行即可。
+    -->
+    <LinearLayout
+        android:id="@+id/log_header"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="@string/log_title" />
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            style="@style/Text.Section"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/log_title" />
+
+        <TextView
+            android:id="@+id/tv_log_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/expand"
+            android:textColor="@color/accent"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <ScrollView
         android:id="@+id/sv_log"
@@ -402,7 +464,8 @@
         android:layout_height="120dp"
         android:layout_marginTop="6dp"
         android:background="@drawable/bg_panel"
-        android:padding="10dp">
+        android:padding="10dp"
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/tv_log"

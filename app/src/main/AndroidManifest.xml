@@ -67,6 +67,14 @@
             android:launchMode="singleTop"
             android:screenOrientation="landscape" />
 
+        <!-- 开 ADB 的品牌路径页：顶栏「?」、首屏引导、连接失败提示三处都指向它。
+             纯展示页，没有任何自动动作，不需要导出。 -->
+        <activity
+            android:name=".AdbHelpActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape" />
+
         <!-- 只读地把缓存里的安装包交给系统安装器，不导出 -->
         <provider
             android:name=".apk.ApkProvider"

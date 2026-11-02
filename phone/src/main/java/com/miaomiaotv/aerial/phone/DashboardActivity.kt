@@ -42,10 +42,22 @@ class DashboardActivity : Activity() {
     private lateinit var opt1: TextView
     private lateinit var opt2: TextView
     private lateinit var opt3: TextView
+    private lateinit var optionsHeader: View
+    private lateinit var optionsRow: View
+    private lateinit var tvOptionsSummary: TextView
+    private lateinit var tvOptionsToggle: TextView
+    private lateinit var logHeader: View
+    private lateinit var tvLogToggle: TextView
     private lateinit var settings: AerialSettings
 
     private val logBuilder = StringBuilder()
     private var busy = false
+
+    /** 安装选项默认折叠：三个技术开关不该占用户的第一眼 */
+    private var optionsExpanded = false
+
+    /** 日志默认折叠：它 99% 时间是空的，出错时才自动展开 */
+    private var logExpanded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +91,12 @@ class DashboardActivity : Activity() {
         opt1 = findViewById(R.id.opt_1)
         opt2 = findViewById(R.id.opt_2)
         opt3 = findViewById(R.id.opt_3)
+        optionsHeader = findViewById(R.id.options_header)
+        optionsRow = findViewById(R.id.options_row)
+        tvOptionsSummary = findViewById(R.id.tv_options_summary)
+        tvOptionsToggle = findViewById(R.id.tv_options_toggle)
+        logHeader = findViewById(R.id.log_header)
+        tvLogToggle = findViewById(R.id.tv_log_toggle)
 
         settings = AerialSettings(this)
         // 目标是持久化的：上次选了 CleanYourTV，下次打开还是它
@@ -99,6 +117,9 @@ class DashboardActivity : Activity() {
         opt1.setOnClickListener { onOption(0) }
         opt2.setOnClickListener { onOption(1) }
         opt3.setOnClickListener { onOption(2) }
+
+        optionsHeader.setOnClickListener { setOptionsExpanded(!optionsExpanded) }
+        logHeader.setOnClickListener { setLogExpanded(!logExpanded) }
 
         applyTargetStyle()
         refreshInfo()
@@ -179,6 +200,36 @@ class DashboardActivity : Activity() {
                 resources.getColor(if (enabled) R.color.text_primary else R.color.text_secondary)
             )
         }
+        // 折叠态的一行摘要：只列「开着」的项，信息不丢，但不占第一眼
+        tvOptionsSummary.text = optionsSummary()
+        tvOptionsToggle.setText(if (optionsExpanded) R.string.collapse else R.string.expand)
+    }
+
+    /** 折叠时显示的那一行（哪些开关是开着的） */
+    private fun optionsSummary(): String {
+        val parts = mutableListOf<String>()
+        if (Session.target.isAerial) {
+            parts += getString(if (settings.useGuard) R.string.summary_guard else R.string.summary_standard)
+            if (settings.keepAdb) parts += getString(R.string.summary_adb)
+        } else {
+            if (settings.cytInputKey) parts += getString(R.string.summary_input)
+            if (settings.cytHomeKey) parts += getString(R.string.summary_home)
+        }
+        if (settings.ownScreensaver) parts += getString(R.string.summary_screen)
+        return if (parts.isEmpty()) getString(R.string.summary_default) else parts.joinToString("   ·   ")
+    }
+
+    private fun setOptionsExpanded(expanded: Boolean) {
+        optionsExpanded = expanded
+        optionsRow.visibility = if (expanded) View.VISIBLE else View.GONE
+        tvOptionsToggle.setText(if (expanded) R.string.collapse else R.string.expand)
+    }
+
+    private fun setLogExpanded(expanded: Boolean) {
+        logExpanded = expanded
+        svLog.visibility = if (expanded) View.VISIBLE else View.GONE
+        tvLogToggle.setText(if (expanded) R.string.collapse else R.string.expand)
+        if (expanded) svLog.post { svLog.fullScroll(View.FOCUS_DOWN) }
     }
 
     private fun sh(cmd: String): String = runCatching {
@@ -231,9 +282,15 @@ class DashboardActivity : Activity() {
         runOnUiThread {
             logBuilder.append(line).append("\n")
             tvLog.text = logBuilder.toString()
+            // 出错自动展开：用户不用先想到「去点一下日志」才知道哪里失败
+            if (!logExpanded && isErrorLine(line)) setLogExpanded(true)
             svLog.post { svLog.fullScroll(View.FOCUS_DOWN) }
         }
     }
+
+    private fun isErrorLine(line: String): Boolean =
+        line.contains("出错") || line.contains("失败") || line.contains("异常") ||
+            line.startsWith("✗") || line.contains("Exception")
 
     private fun setStep(label: String, percent: Int) {
         runOnUiThread {

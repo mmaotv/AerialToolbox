@@ -20,8 +20,8 @@ android {
         applicationId = "com.miaomiaotv.aerial"
         minSdk = 21
         targetSdk = 28
-        versionCode = 8
-        versionName = "1.3.4"
+        versionCode = 9
+        versionName = "1.3.5"
     }
 
     androidResources {

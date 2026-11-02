@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  主操作卡片（首屏唯一一张有持久强调色的卡）。
+  聚焦时和其它卡片一样翻成近白色板——这是 tvOS 的焦点语言，不能破例；
+  未聚焦时靠「品牌强调色描边 + 淡强调底」区别于次卡，这样主操作的位置感
+  不会随焦点移动而消失（之前主次只靠焦点白底区分，焦点一走就没有锚点了）。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/card_focused" android:state_focused="true" />
+    <item android:drawable="@drawable/card_focused" android:state_pressed="true" />
+    <item android:drawable="@drawable/card_main_normal" />
+</selector>

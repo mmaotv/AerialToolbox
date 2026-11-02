@@ -12,6 +12,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -21,10 +24,12 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import com.miaomiaotv.aerial.adb.AdbChannel
 import com.miaomiaotv.aerial.adb.AdbIdentity
 import com.miaomiaotv.aerial.adb.UnauthorizedException
+import com.miaomiaotv.aerial.core.AdbGuide
 import com.miaomiaotv.aerial.core.AdbSession
 import com.miaomiaotv.aerial.core.AerialRunner
 import com.miaomiaotv.aerial.core.AerialSettings
@@ -54,13 +59,26 @@ import java.util.concurrent.Executors
  */
 class MainActivity : Activity() {
 
-    private lateinit var statusText: TextView
-    private lateinit var deviceText: TextView
-    private lateinit var installedText: TextView
-    private lateinit var latestText: TextView
+    private lateinit var infoText: TextView
     private lateinit var logText: TextView
     private lateinit var actionGrid: LinearLayout
+    private lateinit var actionScroll: ScrollView
     private lateinit var retryButton: Button
+    private lateinit var helpButton: Button
+
+    /** 未连通调试通道时顶替操作区的引导块（它自己就是首屏的「第 1 步」） */
+    private lateinit var blockGuide: ScrollView
+    private lateinit var guideBrand: TextView
+    private lateinit var guideError: TextView
+    private lateinit var guideRetry: Button
+    private lateinit var guideHelp: Button
+
+    /** 「更多功能」弹窗：只有这一个，反复 show/dismiss，不重复创建窗口 */
+    private var moreDialog: Dialog? = null
+    private var moreGrid: LinearLayout? = null
+
+    /** 当前这一屏「更多功能」里的动作，随目标桌面与安装状态变化，重建宫格时一起算 */
+    private var moreActions: List<Action> = emptyList()
 
     /**
      * 模态弹窗。
@@ -86,7 +104,8 @@ class MainActivity : Activity() {
     private lateinit var cancelButton: Button
 
     /** 弹窗此刻是否在显示：显示期间绝不能让主界面抢焦点 */
-    private val modalShowing: Boolean get() = overlayDialog?.isShowing == true
+    private val modalShowing: Boolean
+        get() = overlayDialog?.isShowing == true || moreDialog?.isShowing == true
 
     /** 上一次真正执行动作的时间，用来吃掉遥控器的连击 */
     private var lastActionAt = 0L
@@ -139,6 +158,10 @@ class MainActivity : Activity() {
     @Volatile
     private var busy = false
 
+    /** 信息栏第一个字段：连接状态文字与它的颜色（原来是一个独立的胶囊控件） */
+    private var stateLabel = ""
+    private var stateState = STATE_NONE
+
     private val logLines = ArrayDeque<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -150,19 +173,27 @@ class MainActivity : Activity() {
         target = Target.current(this)
         bundled = BundledRelease(this, target.bundledDir)
 
-        statusText = findViewById(R.id.tvStatus)
-        deviceText = findViewById(R.id.tvDevice)
-        installedText = findViewById(R.id.tvInstalled)
-        latestText = findViewById(R.id.tvLatest)
+        infoText = findViewById(R.id.tvInfo)
         logText = findViewById(R.id.tvLog)
         actionGrid = findViewById(R.id.actionGrid)
+        actionScroll = findViewById(R.id.actionScroll)
         retryButton = findViewById(R.id.btnRetry)
+        helpButton = findViewById(R.id.btnHelp)
+        blockGuide = findViewById(R.id.blockGuide)
+        guideBrand = findViewById(R.id.tvGuideBrand)
+        guideError = findViewById(R.id.tvGuideError)
+        guideRetry = findViewById(R.id.btnGuideRetry)
+        guideHelp = findViewById(R.id.btnGuideHelp)
         chipAerial = findViewById(R.id.chipAerial)
         chipCleanTv = findViewById(R.id.chipCleanTv)
 
         createOverlayDialog()
+        renderGuideBrands()
 
         retryButton.setOnClickListener { guarded { connect() } }
+        guideRetry.setOnClickListener { guarded { connect() } }
+        helpButton.setOnClickListener { guarded { openAdbHelp() } }
+        guideHelp.setOnClickListener { guarded { openAdbHelp() } }
         chipAerial.setOnClickListener { guarded { switchTarget(Target.AERIAL) } }
         chipCleanTv.setOnClickListener { guarded { switchTarget(Target.CLEAN_TV) } }
 
@@ -204,6 +235,12 @@ class MainActivity : Activity() {
     }
 
     override fun onBackPressed() {
+        // 「更多功能」弹窗：返回键先关它，不能一路退到桌面
+        val more = moreDialog
+        if (more != null && more.isShowing) {
+            more.dismiss()
+            return
+        }
         if (modalShowing) {
             // 进度弹窗不可取消（busy 期间 dismiss 会被忽略），结果/确认弹窗按返回等于关闭
             hideOverlay()
@@ -217,12 +254,13 @@ class MainActivity : Activity() {
     private fun connect() {
         if (busy) return
         status(getString(R.string.connecting))
+        handler.post { guideError.visibility = View.GONE }
         executor.execute {
             val identity = runCatching { AdbIdentity(File(filesDir, KEYS_DIR)) }
                 .onFailure { Log.e(TAG, "密钥初始化失败", it) }
                 .getOrNull()
             if (identity == null) {
-                status("密钥初始化失败", STATE_WARN)
+                failConnect("密钥初始化失败")
                 return@execute
             }
 
@@ -234,7 +272,7 @@ class MainActivity : Activity() {
 
             val candidate = AdbChannel()
             candidate.attachIdentity(identity)
-            candidate.onNeedAuthorization = { status("请在电视上选择「允许」调试授权", STATE_WARN) }
+            candidate.onNeedAuthorization = { status("请在电视上选择「允许」", STATE_WARN) }
 
             try {
                 candidate.connect(TARGET_HOST, TARGET_PORT, CONNECT_TIMEOUT_MS)
@@ -246,8 +284,8 @@ class MainActivity : Activity() {
                 )
                 runner = r
                 AdbSession.attach(candidate, r)
-                status("调试通道已连接", STATE_OK)
-                // 连接成功不再刷日志：顶栏状态胶囊已经说明了，底部只留真正有内容的操作记录
+                status(getString(R.string.connected), STATE_OK)
+                // 连接成功不再刷日志：状态点已经说明了，底部只留真正有内容的操作记录
 
                 // 自助授权写安全设置权限（持久化），并立即把 ADB 拉回常开状态
                 AdbKeepAlive.ensurePermissionGranted(candidate)
@@ -268,33 +306,62 @@ class MainActivity : Activity() {
                 buildActionGrid()
             } catch (e: UnauthorizedException) {
                 candidate.disconnect()
-                status("未获得调试授权", STATE_WARN)
-                showDone(
-                    "需要在电视上允许调试授权",
-                    listOf(
-                        "电视上应该弹出了「允许 USB 调试吗？」的窗口",
-                        "用遥控器选「允许」并勾选「始终允许」",
-                        "如果没看到弹窗，重新点一次「重新连接」"
-                    ),
-                    ok = false
-                )
+                failConnect("电视上没点「允许」调试授权")
             } catch (e: Exception) {
                 candidate.disconnect()
-                status("未连接本机调试通道", STATE_WARN)
-                log("连接失败：${e.message}")
-                showDone(
-                    "先打开电视的 ADB 调试",
-                    listOf(
-                        "本工具通过电视自己的调试通道执行安装命令",
-                        "小米/Redmi：设置 → 账号与安全 → 打开「ADB 调试」",
-                        "原生 Android TV / 索尼：连按「内部版本号」7 次，再到开发者选项打开「USB 调试」",
-                        "TCL / 雷鸟：设置 → 关于 → 本机信息 → 遥控器按 上 下 左 右 → 打开 ADB",
-                        "打开后回到本页点「重新连接」"
-                    ),
-                    ok = false
-                )
+                // 原始异常只留在 logcat：界面上给用户看 「ECONNREFUSED ... port 59298」 等于没说
+                Log.i(TAG, "连接失败：${e.message}")
+                failConnect(friendlyReason(e))
             }
         }
+    }
+
+    /** 把 socket 异常翻成用户能对上号的说法 */
+    private fun friendlyReason(e: Throwable): String {
+        val raw = e.message.orEmpty()
+        return when {
+            raw.contains("ECONNREFUSED", true) || raw.contains("refused", true) ->
+                "电视本机的 5555 端口没在监听，ADB 调试还没打开"
+            raw.contains("timeout", true) || raw.contains("timed out", true) ||
+                raw.contains("failed to connect", true) ->
+                "连不上电视本机的 5555 端口，ADB 开关可能被系统关掉了"
+            raw.isBlank() -> "连不上本机调试通道"
+            else -> raw.lineSequence().first().trim()
+        }
+    }
+
+    /**
+     * 连接失败：把原因写进首屏引导，不再弹一个「报错框」。
+     *
+     * 失败时用户唯一想知道的就是「下一步做什么」，而引导块本身就是那件事；
+     * 弹窗反而把引导盖住，关掉之后又找不回来（旧版就是这样，用户以为软件坏了）。
+     */
+    private fun failConnect(reason: String) {
+        installedVersion = null
+        deviceLabel = ""
+        AdbSession.installedVersion = null
+        status(getString(R.string.not_connected), STATE_WARN)
+        handler.post {
+            guideError.text = getString(R.string.guide_failed, reason)
+            guideError.visibility = View.VISIBLE
+            renderInfoBar()
+            rebuildActionGrid()
+        }
+    }
+
+    /** 开 ADB 的品牌路径页（顶栏「?」、引导里的「全部品牌」都走这里） */
+    private fun openAdbHelp() {
+        if (busy) return
+        startActivity(Intent(this, AdbHelpActivity::class.java))
+    }
+
+    /**
+     * 首屏引导只露一条最常见的品牌（小米 / 盒子用户占比最高），压成一行。
+     * 其余十个品牌在「全部品牌」页里，引导页不铺长文本——那会把标题挤出屏幕。
+     */
+    private fun renderGuideBrands() {
+        val top = AdbGuide.TOP.firstOrNull() ?: return
+        guideBrand.text = "${top.oneLineBrand}：${top.oneLine}"
     }
 
     /** 打开「桌面更新」页：联网查最新版、看日志、下载安装都在那一页 */
@@ -329,12 +396,12 @@ class MainActivity : Activity() {
         }
     }
 
+    /** 目标胶囊：选中态换更实的胶囊底，未选中也保留胶囊形（否则聚焦时会露出个灰方块） */
     private fun renderTargetChips() {
         listOf(chipAerial to Target.AERIAL, chipCleanTv to Target.CLEAN_TV).forEach { (view, t) ->
             val on = t == target
             view.setTextColor(if (on) 0xFFFFFFFF.toInt() else 0x8AFFFFFF.toInt())
-            view.background = if (on) getDrawable(R.drawable.bg_chip) else null
-            view.alpha = if (on) 1f else 0.75f
+            view.background = getDrawable(if (on) R.drawable.bg_chip_on else R.drawable.bg_chip)
         }
     }
 
@@ -371,127 +438,149 @@ class MainActivity : Activity() {
         if (Looper.myLooper() == Looper.getMainLooper()) block() else handler.post(block)
     }
 
-    private fun aerialActions(
-        connected: Boolean,
-        installed: String?,
-        bundledVersion: String,
-        installedIsNewer: Boolean,
-        toolboxVersion: String
-    ): List<Action> = listOf(
-        Action(
-            title = if (installed == null) "一键安装桌面" else "一键安装 / 升级桌面",
-            subtitle = when {
-                installedIsNewer -> "本机版本更新，重装会降级"
-                bundledVersion.isNotBlank() -> "内置 v$bundledVersion，离线直装"
-                else -> "内置包缺失，需联网下载"
-            },
-            enabled = connected && !busy
-        ) { startInstall() },
-        Action(
-            title = "桌面更新",
-            subtitle = "查 GitHub 新版，看日志再升级",
-            enabled = !busy
-        ) { openUpdatePage() },
-        Action(
-            title = "修复接管",
-            subtitle = "主页键失灵、守护掉线时用",
-            enabled = connected && installed != null && !busy
-        ) { startRepair() },
-        Action(
-            title = "验收检查",
-            subtitle = "确认主页键是否进入 Aerial",
-            enabled = connected && installed != null && !busy
-        ) { startVerify() },
-        Action(
-            title = if (settings.useGuard) "安装通道：guard 版" else "安装通道：标准版",
-            subtitle = if (settings.useGuard)
-                "靠无障碍守护接管（TCL/海信）"
-            else "正常声明 HOME（小米推荐）",
-            enabled = !busy
-        ) { toggleFlavor() },
-        Action(
-            title = if (settings.keepAdb) "ADB 常开：开" else "ADB 常开：关",
-            subtitle = "待机唤醒后自动恢复 ADB",
-            enabled = !busy
-        ) { toggleKeepAdb() },
-        Action(
-            title = if (settings.ownScreensaver) "屏保接管：开" else "屏保接管：关",
-            subtitle = "把系统屏保换成航拍（TCL）",
-            enabled = !busy
-        ) { toggleScreensaver() },
-        Action(
-            title = "还原 / 卸载",
-            subtitle = "撤销接管，可一并卸载",
-            enabled = connected && installed != null && !busy
-        ) { showRestoreConfirm() },
-        Action(
-            title = "关于 / 更新工具箱",
-            subtitle = "v$toolboxVersion · 自更新与版本日志",
-            enabled = !busy
-        ) { openAboutPage() }
+    /**
+     * 一屏的排布：一张主卡 + 两张次卡 + 一组收进「更多」的动作。
+     *
+     * 首屏的判断标准是「用户下一步该点哪个」，不是「我们有几个功能」。
+     * 旧版 9 张卡等权铺在 3×3 宫里，把有先后顺序的流程（安装 → 验收）拆成了并列按钮，
+     * 开关和动作混排，720p 上第三行还落在屏幕外且没有任何提示。
+     */
+    private data class Screen(
+        val primary: Action,
+        val secondary: List<Action>,
+        val more: List<Action>
     )
 
-    /** CleanYourTV 的卡片：没有守护与安装通道，换成遥控器按键与兼容性说明 */
-    private fun cleanTvActions(
+    private fun installAction(
+        connected: Boolean,
+        installed: String?,
+        bundledVersion: String,
+        installedIsNewer: Boolean,
+        tooOld: Boolean
+    ): Action {
+        val title = if (installed == null) {
+            getString(R.string.install_title, target.label)
+        } else {
+            getString(R.string.install_title_reinstall)
+        }
+        val sub = when {
+            tooOld -> getString(R.string.install_sub_too_old)
+            installedIsNewer -> getString(R.string.install_sub_downgrade)
+            // 次卡只有 1/3 宽，塞不下「离线安装，约 1 分钟」，那句话留给主卡
+            installed != null && bundledVersion.isNotBlank() ->
+                getString(R.string.install_sub_bundled_short, bundledVersion)
+            bundledVersion.isNotBlank() -> getString(R.string.install_sub_bundled, bundledVersion)
+            else -> getString(R.string.install_sub_download)
+        }
+        return Action(title, sub, connected && !busy && !tooOld) { startInstall() }
+    }
+
+    private fun verifyAction(connected: Boolean, installed: String?): Action = Action(
+        getString(R.string.verify_title),
+        getString(if (target.isAerial) R.string.verify_sub_aerial else R.string.verify_sub_clean),
+        connected && installed != null && !busy
+    ) { startVerify() }
+
+    private fun updateAction(): Action = Action(
+        getString(R.string.update_title_action),
+        getString(if (target.isAerial) R.string.update_sub_aerial else R.string.update_sub_clean),
+        !busy
+    ) { openUpdatePage() }
+
+    private fun aboutAction(toolboxVersion: String): Action = Action(
+        getString(R.string.about_title_action),
+        getString(R.string.about_sub, toolboxVersion),
+        !busy
+    ) { openAboutPage() }
+
+    private fun onOff(on: Boolean): String =
+        getString(if (on) R.string.state_on else R.string.state_off)
+
+    private fun aerialScreen(
         connected: Boolean,
         installed: String?,
         bundledVersion: String,
         installedIsNewer: Boolean,
         toolboxVersion: String
-    ): List<Action> {
-        val tooOld = deviceSdk in 1 until target.minSdk
-        return listOf(
+    ): Screen {
+        val install = installAction(connected, installed, bundledVersion, installedIsNewer, tooOld = false)
+        val verify = verifyAction(connected, installed)
+        // 装过之后首屏该回答的是「接管成功了吗」，而不是继续劝你再装一遍
+        val primary = if (installed == null) install else verify
+        val secondary = if (installed == null) listOf(verify, updateAction()) else listOf(install, updateAction())
+        val more = listOf(
             Action(
-                title = if (installed == null) "一键安装桌面" else "一键安装 / 升级桌面",
-                subtitle = when {
-                    tooOld -> "这台是 Android ${CleanTvSpec.androidName(deviceSdk)}，装不了"
-                    installedIsNewer -> "本机版本更新，重装会降级"
-                    bundledVersion.isNotBlank() -> "内置 v$bundledVersion，离线直装"
-                    else -> "内置包缺失，需联网下载"
-                },
-                enabled = connected && !busy && !tooOld
-            ) { startInstall() },
-            Action(
-                title = "桌面更新",
-                subtitle = "查本仓库代构建的新版",
-                enabled = !busy
-            ) { openUpdatePage() },
-            Action(
-                title = "修复接管",
-                subtitle = "主页跑偏、被原桌面抢回时用",
-                enabled = connected && installed != null && !busy
+                getString(R.string.repair_title),
+                getString(R.string.repair_sub_aerial),
+                connected && installed != null && !busy
             ) { startRepair() },
             Action(
-                title = "验收检查",
-                subtitle = "确认主页归属与系统版本",
-                enabled = connected && installed != null && !busy
-            ) { startVerify() },
-            Action(
-                title = if (settings.cytInputKey) "输入源键：开" else "输入源键：关",
-                subtitle = "遥控器输入源键可用",
-                enabled = connected && !busy
-            ) { toggleCytInputKey() },
-            Action(
-                title = if (settings.cytHomeKey) "Home 键兼容：开" else "Home 键兼容：关",
-                subtitle = "小米等 Home 发成 ALL_APPS",
-                enabled = connected && !busy
-            ) { toggleCytHomeKey() },
-            Action(
-                title = if (settings.ownScreensaver) "屏保接管：开" else "屏保接管：关",
-                subtitle = "换成 CleanYourTV 时钟",
-                enabled = !busy
-            ) { toggleScreensaver() },
-            Action(
-                title = "还原 / 卸载",
-                subtitle = "恢复原桌面，可一并卸载",
-                enabled = connected && installed != null && !busy
+                getString(R.string.restore_title),
+                getString(R.string.restore_sub_aerial),
+                connected && installed != null && !busy
             ) { showRestoreConfirm() },
             Action(
-                title = "关于 / 更新工具箱",
-                subtitle = "v$toolboxVersion · 自更新与版本日志",
-                enabled = !busy
-            ) { openAboutPage() }
+                getString(R.string.opt_keep_adb, onOff(settings.keepAdb)),
+                getString(R.string.opt_keep_adb_sub),
+                !busy
+            ) { toggleKeepAdb() },
+            Action(
+                getString(R.string.opt_screensaver, onOff(settings.ownScreensaver)),
+                getString(R.string.opt_screensaver_sub_aerial),
+                !busy
+            ) { toggleScreensaver() },
+            Action(
+                getString(R.string.opt_compat, onOff(settings.useGuard)),
+                getString(R.string.opt_compat_sub),
+                !busy
+            ) { toggleFlavor() },
+            aboutAction(toolboxVersion)
         )
+        return Screen(primary, secondary, more)
+    }
+
+    /** CleanYourTV 的一屏：没有守护与安装通道，换成遥控器按键相关的两个开关 */
+    private fun cleanTvScreen(
+        connected: Boolean,
+        installed: String?,
+        bundledVersion: String,
+        installedIsNewer: Boolean,
+        toolboxVersion: String
+    ): Screen {
+        val tooOld = deviceSdk in 1 until target.minSdk
+        val install = installAction(connected, installed, bundledVersion, installedIsNewer, tooOld)
+        val verify = verifyAction(connected, installed)
+        val primary = if (installed == null) install else verify
+        val secondary = if (installed == null) listOf(verify, updateAction()) else listOf(install, updateAction())
+        val more = listOf(
+            Action(
+                getString(R.string.repair_title),
+                getString(R.string.repair_sub_clean),
+                connected && installed != null && !busy
+            ) { startRepair() },
+            Action(
+                getString(R.string.restore_title),
+                getString(R.string.restore_sub_clean),
+                connected && installed != null && !busy
+            ) { showRestoreConfirm() },
+            Action(
+                getString(R.string.opt_input_key, onOff(settings.cytInputKey)),
+                getString(R.string.opt_input_key_sub),
+                connected && !busy
+            ) { toggleCytInputKey() },
+            Action(
+                getString(R.string.opt_home_key, onOff(settings.cytHomeKey)),
+                getString(R.string.opt_home_key_sub),
+                connected && !busy
+            ) { toggleCytHomeKey() },
+            Action(
+                getString(R.string.opt_screensaver, onOff(settings.ownScreensaver)),
+                getString(R.string.opt_screensaver_sub_clean),
+                !busy
+            ) { toggleScreensaver() },
+            aboutAction(toolboxVersion)
+        )
+        return Screen(primary, secondary, more)
     }
 
     private fun rebuildActionGrid() {
@@ -503,10 +592,25 @@ class MainActivity : Activity() {
         // 本机已经在线升级过时，再用内置包装就是降级，提前说清楚
         val installedIsNewer = installed != null && bundledVersion.isNotBlank() &&
             VersionCompare.compare(installed, bundledVersion) > 0
-        val actions = if (target.isAerial) {
-            aerialActions(connected, installed, bundledVersion, installedIsNewer, toolboxVersion)
+        val screen = if (target.isAerial) {
+            aerialScreen(connected, installed, bundledVersion, installedIsNewer, toolboxVersion)
         } else {
-            cleanTvActions(connected, installed, bundledVersion, installedIsNewer, toolboxVersion)
+            cleanTvScreen(connected, installed, bundledVersion, installedIsNewer, toolboxVersion)
+        }
+        moreActions = screen.more
+        renderInfoBar()
+
+        // 通道没通：整块换成「第 1 步」引导。
+        // 这时九张卡一张都用不了，摆出来只会让用户以为是自己点错了地方。
+        val showGuide = !connected
+        blockGuide.visibility = if (showGuide) View.VISIBLE else View.GONE
+        actionScroll.visibility = if (showGuide) View.GONE else View.VISIBLE
+        // 引导块自带「重新连接」，顶栏那个就收起来，避免同一屏两个一样的按钮
+        retryButton.visibility = if (showGuide) View.GONE else View.VISIBLE
+        if (showGuide) {
+            if (busy || modalShowing) return
+            guideRetry.post { if (!guideRetry.hasFocus()) guideRetry.requestFocus() }
+            return
         }
 
         val inflater = LayoutInflater.from(this)
@@ -517,30 +621,37 @@ class MainActivity : Activity() {
         } else {
             ViewGroup.FOCUS_BEFORE_DESCENDANTS
         }
+        var slot = 0
+
+        // 主卡：独占一行，占满宽度。
+        // 高度随屏幕长：1080p 上内容只有半屏、下面一大片空黑，主卡长高一点把版面撑住；
+        // 720p（360dp 高）按 26% 算出来就是 93dp，不会把次卡行挤出屏幕。
+        val primaryCard = inflater.inflate(R.layout.item_action_main, actionGrid, false)
+        Ui.apply(primaryCard)
+        primaryCard.minimumHeight = primaryCardMinHeight()
+        bindCard(primaryCard, screen.primary, slot++)
+        actionGrid.addView(primaryCard)
+
+        // 次卡 + 「更多」：一行三列
+        val secondary = screen.secondary + Action(
+            getString(R.string.more_title),
+            getString(R.string.more_sub),
+            true
+        ) { showMore() }
         var index = 0
-        while (index < actions.size) {
+        while (index < secondary.size) {
             val row = LinearLayout(this)
             row.orientation = LinearLayout.HORIZONTAL
-            // 高度交给内容决定：小屏（720p）三行按 weight 均分会把卡片里的两行字裁掉，
+            // 高度交给内容决定：小屏（720p）按 weight 均分会把卡片里的两行字裁掉，
             // 外面套了 ScrollView，装不下就能滚
             row.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
             )
             for (column in 0 until GRID_COLUMNS) {
-                val action = actions.getOrNull(index) ?: break
+                val action = secondary.getOrNull(index) ?: break
                 val card = inflater.inflate(R.layout.item_action, row, false)
                 Ui.apply(card)
-                card.findViewById<TextView>(R.id.tvTitle).text = action.title
-                card.findViewById<TextView>(R.id.tvSub).text = action.subtitle
-                card.alpha = if (action.enabled) 1f else 0.4f
-                card.isFocusable = action.enabled
-                card.isClickable = action.enabled
-                // 槽位下标：重建后靠它把焦点放回原来那张卡
-                card.tag = index
-                if (action.enabled) {
-                    card.setOnClickListener { guarded { action.onClick() } }
-                    bindFocusZoom(card)
-                }
+                bindCard(card, action, slot++)
                 row.addView(card)
                 index++
             }
@@ -560,24 +671,133 @@ class MainActivity : Activity() {
         if (!focusCard(lastFocusedIndex)) focusCard(0)
     }
 
-    /** 把焦点放到第 [slot] 张卡片上；该槽位不可聚焦时返回 false */
+    /**
+     * 把 [action] 绑到一张卡上。
+     *
+     * [slot] 是它在整屏里的序号，重建后靠它把焦点放回去；
+     * 传 null 表示这张卡不参与焦点记忆（「更多」弹窗里的卡就是这种，
+     * 否则关弹窗时会把主宫格的焦点序号改成弹窗里的位置，焦点乱跳）。
+     */
+    private fun bindCard(card: View, action: Action, slot: Int?) {
+        card.findViewById<TextView>(R.id.tvTitle).text = action.title
+        card.findViewById<TextView>(R.id.tvSub).text = action.subtitle
+        card.alpha = if (action.enabled) 1f else 0.4f
+        card.isFocusable = action.enabled
+        card.isClickable = action.enabled
+        card.tag = slot
+        if (action.enabled) {
+            card.setOnClickListener { guarded { action.onClick() } }
+            bindFocusZoom(card)
+        }
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    /** 主卡最小高度：屏幕越高长得越高，夹在 82dp（720p 不挤压次卡）到 132dp（1080p 撑住版面）之间 */
+    private fun primaryCardMinHeight(): Int {
+        val metrics = resources.displayMetrics
+        val screenDp = metrics.heightPixels / metrics.density
+        return (screenDp * 0.26f).toInt().coerceIn(dp(82), dp(132))
+    }
+
+    /**
+     * 把焦点放到第 [slot] 张卡片上；该槽位不可聚焦时返回 false。
+     *
+     * 主卡直接挂在 [actionGrid] 下、次卡包在行里，所以不能假设「两层」结构——
+     * 这里按创建顺序做一次扁平遍历，凡是带 tag 的视图就是一个槽位。
+     */
     private fun focusCard(slot: Int): Boolean {
-        var index = 0
-        for (rowIndex in 0 until actionGrid.childCount) {
-            val row = actionGrid.getChildAt(rowIndex) as? LinearLayout ?: continue
-            for (childIndex in 0 until row.childCount) {
-                val child = row.getChildAt(childIndex)
-                // 占位空位没有 tag，不占槽位编号
-                if (child.tag == null) continue
-                if (index == slot) {
-                    if (!child.isFocusable) return false
-                    if (currentFocus !== child) child.requestFocus()
-                    return true
-                }
-                index++
+        val cards = ArrayList<View>(8)
+        collectSlots(actionGrid, cards)
+        val card = cards.getOrNull(slot) ?: return false
+        if (!card.isFocusable) return false
+        if (currentFocus !== card) card.requestFocus()
+        return true
+    }
+
+    private fun collectSlots(parent: ViewGroup, out: MutableList<View>) {
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
+            if (child.tag is Int) {
+                out.add(child)
+            } else if (child is ViewGroup) {
+                collectSlots(child, out)
             }
         }
-        return false
+    }
+
+    // ===================== 更多功能 =====================
+
+    /**
+     * 不常用的动作与开关全收在这个弹窗里。
+     *
+     * 固定 3 列 × 2 行，不做可滚动的长列表：遥控器在长列表里上下找东西很痛苦，
+     * 而这里本来就只有 6 项。选中任意一项先关弹窗再执行，免得两个窗口叠在一起。
+     */
+    private fun showMore() {
+        if (busy || overlayDialog?.isShowing == true) return
+        val actions = moreActions
+        if (actions.isEmpty()) return
+        val dialog = moreDialog ?: createMoreDialog()
+        val grid = moreGrid ?: return
+        grid.removeAllViews()
+
+        val inflater = LayoutInflater.from(this)
+        var firstFocusable: View? = null
+        var index = 0
+        while (index < actions.size) {
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            for (column in 0 until MORE_COLUMNS) {
+                val action = actions.getOrNull(index) ?: break
+                val card = inflater.inflate(R.layout.item_action, row, false)
+                Ui.apply(card)
+                // 先关弹窗再执行：结果弹窗 / 进度弹窗都另开一个窗口，叠着会互相抢焦点
+                val wrapped = action.copy(onClick = {
+                    dialog.dismiss()
+                    handler.post { action.onClick() }
+                })
+                bindCard(card, wrapped, null)
+                if (firstFocusable == null && action.enabled) firstFocusable = card
+                row.addView(card)
+                index++
+            }
+            while (row.childCount < MORE_COLUMNS) {
+                val placeholder = View(this)
+                placeholder.layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+                row.addView(placeholder)
+            }
+            grid.addView(row)
+        }
+
+        if (!dialog.isShowing) dialog.show()
+        // 宽度按屏宽算：固定在 620dp 的话，720p（屏宽 640dp）上几乎贴满边缘
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.88f).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        val focusView = firstFocusable ?: grid
+        focusView.post { firstFocusable?.requestFocus() }
+    }
+
+    private fun createMoreDialog(): Dialog {
+        moreDialog?.let { return it }
+        val dialog = Dialog(this, R.style.Dialog_App)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_more)
+        dialog.setCanceledOnTouchOutside(false)
+        // 关掉之后把焦点还给宫格（还给原来那张卡），不要留一个「没有焦点」的空窗口
+        dialog.setOnDismissListener { handler.post { rebuildActionGrid() } }
+        (dialog.findViewById<View>(R.id.moreGrid)?.parent as? View)?.let { Ui.apply(it) }
+        moreGrid = dialog.findViewById(R.id.moreGrid)
+        dialog.findViewById<Button>(R.id.btnMoreClose).setOnClickListener {
+            guarded { dialog.dismiss() }
+        }
+        moreDialog = dialog
+        return dialog
     }
 
     /** 遥控器焦点放大效果，TV 上必须有明显的焦点反馈 */
@@ -1212,32 +1432,65 @@ class MainActivity : Activity() {
 
     // ===================== 界面辅助 =====================
 
-    private fun renderInfo() {
-        val bundledInfo = bundled.info()
-        handler.post {
-            deviceText.text = deviceLabel.ifBlank { getString(R.string.dash) }
-            installedText.text = installedVersion?.let {
-                if (it.isBlank()) "已安装" else "已安装 v$it"
-            } ?: "未安装"
-            latestText.text = when {
-                !bundledInfo.available -> "未内置"
-                bundledInfo.publishedAt.isNotBlank() -> "v${bundledInfo.version}（${bundledInfo.publishedAt}）"
-                else -> "v${bundledInfo.version}"
-            }
-        }
-    }
+    private fun renderInfo() = renderInfoBar()
 
-    /** 状态胶囊：文字前带一个状态点，绿=通道可用、橙=等待授权或失败、灰=未知 */
+    /**
+     * 信息栏一行：● 状态 · 设备 · 桌面版本。
+     *
+     * 原来是三块并排面板（设备 / 桌面状态 / 内置离线包）各占 1/3 宽，
+     * 说的是同一件事的三个字段，却占掉首屏 58dp，还让「内置 v1.30」在页面上出现了三次。
+     * 现在合成一行：状态点按连接结果变色，其余两段用次级色。
+     */
     @Suppress("DEPRECATION")
-    private fun status(text: String, state: Int = STATE_NONE) {
+    private fun renderInfoBar() {
         handler.post {
-            val color = when (state) {
+            val primary = resources.getColor(R.color.text_primary)
+            val secondary = resources.getColor(R.color.text_secondary)
+            val dot = when (stateState) {
                 STATE_OK -> resources.getColor(R.color.ok)
                 STATE_WARN -> resources.getColor(R.color.warn)
                 else -> resources.getColor(R.color.text_tertiary)
             }
-            Ui.status(statusText, text, color)
+            val sb = SpannableStringBuilder()
+            sb.append("●")
+            sb.setSpan(ForegroundColorSpan(dot), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sb.append(" ")
+            var from = sb.length
+            sb.append(stateLabel.ifBlank { getString(R.string.not_connected) })
+            sb.setSpan(
+                ForegroundColorSpan(primary), from, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            val part = { text: String ->
+                if (text.isNotBlank()) {
+                    sb.append("   ·   ")
+                    from = sb.length
+                    sb.append(text)
+                    sb.setSpan(
+                        ForegroundColorSpan(secondary), from, sb.length,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
+            part(deviceLabel)
+            if (channel != null) {
+                val installed = installedVersion
+                part(
+                    if (installed == null) {
+                        getString(R.string.desktop_not_installed)
+                    } else {
+                        getString(R.string.desktop_installed, installed.ifBlank { "—" })
+                    }
+                )
+            }
+            infoText.text = sb
         }
+    }
+
+    /** 状态：写进信息栏的第一个字段（原来是一个独立的胶囊控件） */
+    private fun status(text: String, state: Int = STATE_NONE) {
+        stateLabel = text
+        stateState = state
+        renderInfoBar()
     }
     private fun log(line: String) {
         Log.i(TAG, line)
@@ -1288,6 +1541,9 @@ class MainActivity : Activity() {
 
         /** 操作卡片列数：3 列更像 tvOS 的 app 宫格 */
         const val GRID_COLUMNS = 3
+
+        /** 「更多功能」弹窗的列数：3 列 × 2 行整块放下，720p 上也不用滚动 */
+        const val MORE_COLUMNS = 3
 
         const val STATE_NONE = 0
         const val STATE_OK = 1

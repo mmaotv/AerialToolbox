@@ -3,12 +3,73 @@
     <string name="app_name">桌面工具箱</string>
     <string name="app_subtitle">安装 / 接管 / 升级 电视桌面</string>
 
-    <string name="connecting">正在连接本机调试通道…</string>
+    <string name="connecting">正在连接…</string>
+    <string name="connected">已连接</string>
     <string name="reconnect">重新连接</string>
+    <string name="not_connected">未连接</string>
 
-    <string name="info_device">设备</string>
-    <string name="info_desktop">桌面状态</string>
+    <!-- 单条信息栏：状态点 · 设备 · 桌面状态，三块信息合成一行 -->
+    <string name="desktop_installed">桌面 已装 v%1$s</string>
+    <string name="desktop_not_installed">桌面 未安装</string>
     <string name="dash">—</string>
+
+    <!-- 首屏引导（未连通调试通道时整块替代操作区） -->
+    <string name="guide_title">第 1 步 · 在电视上打开 ADB 调试</string>
+    <string name="guide_desc">工具箱靠电视自己的调试通道装桌面，先把 ADB 打开。</string>
+    <string name="guide_retry">我已打开，重新连接</string>
+    <string name="guide_more_brands">全部品牌</string>
+    <string name="guide_failed">没连上：%1$s</string>
+
+    <!-- ADB 帮助页 -->
+    <string name="adb_help_title">在电视上打开 ADB</string>
+    <string name="adb_help_subtitle">遥控器照着按，最后一步都是「打开 ADB / USB 调试」</string>
+    <string name="adb_help_footer">打开后回到工具箱，点「重新连接」。手机端则直接在手机上填这台电视的 IP。</string>
+
+    <!-- 操作卡片 -->
+    <string name="btn_help">帮助</string>
+    <string name="more_title">更多功能</string>
+    <string name="more_sub">修复 · 还原 · 开关</string>
+
+    <string name="install_title">安装 %1$s 桌面</string>
+    <string name="install_title_reinstall">重新安装</string>
+    <string name="install_sub_bundled">内置 v%1$s · 离线安装，约 1 分钟</string>
+    <string name="install_sub_bundled_short">内置 v%1$s</string>
+    <string name="install_sub_download">需联网下载</string>
+    <string name="install_sub_downgrade">重装会降级</string>
+    <string name="install_sub_too_old">系统太旧，装不了</string>
+
+    <string name="verify_title">验收检查</string>
+    <string name="verify_sub_aerial">按一次主页键，看是否进入 Aerial</string>
+    <string name="verify_sub_clean">确认主页与系统版本</string>
+
+    <string name="update_title_action">检查更新</string>
+    <string name="update_sub_aerial">查线上新版</string>
+    <string name="update_sub_clean">查代构建新版</string>
+
+    <string name="repair_title">修复主页键</string>
+    <string name="repair_sub_aerial">主页键失灵时点这里</string>
+    <string name="repair_sub_clean">主页被抢回时点这里</string>
+
+    <string name="restore_title">还原 / 卸载</string>
+    <string name="restore_sub_aerial">撤销接管与授权</string>
+    <string name="restore_sub_clean">恢复原桌面</string>
+
+    <string name="opt_keep_adb">ADB 常开：%1$s</string>
+    <string name="opt_keep_adb_sub">待机后自动恢复</string>
+    <string name="opt_screensaver">屏保接管：%1$s</string>
+    <string name="opt_screensaver_sub_aerial">换成航拍画面</string>
+    <string name="opt_screensaver_sub_clean">换成时钟</string>
+    <string name="opt_compat">兼容模式：%1$s</string>
+    <string name="opt_compat_sub">装不上时打开</string>
+    <string name="opt_input_key">输入源键：%1$s</string>
+    <string name="opt_input_key_sub">输入源键交给桌面</string>
+    <string name="opt_home_key">Home 键兼容：%1$s</string>
+    <string name="opt_home_key_sub">Home 键不生效时打开</string>
+    <string name="state_on">开</string>
+    <string name="state_off">关</string>
+
+    <string name="about_title_action">关于与更新</string>
+    <string name="about_sub">v%1$s · 自更新</string>
 
     <string name="working_title">正在处理</string>
     <string name="preparing">准备中…</string>

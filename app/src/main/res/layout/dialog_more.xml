@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「更多功能」弹窗：把不常用的 6 项从首屏挪到这里。
+
+  用独立 Dialog 窗口而不是在主页里盖一层：同窗口遮罩挡不住焦点，
+  按确认键会打到背后那张卡上（和 dialog_message 同一个理由）。
+  窗口宽度在代码里按屏宽 86% 计算，卡片 3 列 × 2 行，720p 上也能整块放下，
+  不要做成可滚动的长列表——遥控器在大列表里上下找东西很痛苦。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog"
+        android:orientation="vertical"
+        android:padding="22dp">
+
+        <TextView
+            style="@style/Text.Title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/more_title" />
+
+        <TextView
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/more_sub" />
+
+        <LinearLayout
+            android:id="@+id/moreGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/btnMoreClose"
+            style="@style/Btn.Ghost"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/cancel"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>

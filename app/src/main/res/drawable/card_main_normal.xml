@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  主操作卡片未聚焦态：淡强调底 + 品牌色描边。
+
+  这里必须用单层 <stroke>，不能用 layer-list 套两层半透明色板——
+  两层 alpha 会叠加（50% 描边色 + 8% 填充 = 实心绿），卡片会变成一块大绿板。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#142FD0A5" />
+    <stroke
+        android:width="1.5dp"
+        android:color="#992FD0A5" />
+    <corners android:radius="20dp" />
+</shape>

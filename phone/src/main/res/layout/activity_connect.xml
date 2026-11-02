@@ -2,6 +2,10 @@
 <!--
   连接页：与 TV 端同一套视觉语言——纯黑底 + 品牌辉光、品牌标 + 大标题、
   Fill 面板、品牌渐变主按钮、按压反白。
+
+  这一页只回答一件事：连哪台电视。
+  所以「IP → 连接」放在最上面，端口收进「高级」（99% 的人是 5555），
+  扫描结果排在历史记录前面（扫到的才是刚刚可用的那台）。
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -89,12 +93,37 @@
                 android:textColorHint="@color/text_tertiary"
                 android:textSize="15sp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <Button
+                android:id="@+id/btn_connect"
+                style="@style/Btn.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
                 android:layout_marginTop="14dp"
-                android:text="@string/label_port"
-                style="@style/Text.Caption" />
+                android:text="@string/btn_connect"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tv_status"
+                style="@style/Text.Callout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/status_disconnected" />
+
+            <!-- 端口收进「高级」：adbd 固定 5555，只有极少数固件改过 -->
+            <TextView
+                android:id="@+id/tv_advanced"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="@string/advanced"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
 
             <EditText
                 android:id="@+id/et_port"
@@ -109,24 +138,32 @@
                 android:text="5555"
                 android:textColor="@color/text_primary"
                 android:textColorHint="@color/text_tertiary"
-                android:textSize="15sp" />
-
-            <Button
-                android:id="@+id/btn_connect"
-                style="@style/Btn.Primary"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="16dp"
-                android:text="@string/btn_connect"
-                android:textSize="16sp" />
+                android:textSize="15sp"
+                android:visibility="gone" />
         </LinearLayout>
+
+        <!-- 开 ADB 的帮助入口：新用户卡在这里的概率最高，不能让他自己去搜 -->
+        <TextView
+            android:id="@+id/tv_adb_help"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/adb_help_link"
+            android:textColor="@color/accent"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/btn_scan"
             style="@style/Btn.Ghost"
             android:layout_width="match_parent"
             android:layout_height="46dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:text="@string/btn_scan"
             android:textSize="15sp" />
 
@@ -140,24 +177,16 @@
             android:visibility="gone" />
 
         <TextView
-            android:id="@+id/tv_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="@string/status_disconnected"
-            style="@style/Text.Callout" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/saved_devices"
+            android:layout_marginTop="18dp"
+            android:text="@string/found_devices"
             style="@style/Text.Title" />
 
         <ListView
-            android:id="@+id/lv_saved"
+            android:id="@+id/lv_found"
             android:layout_width="match_parent"
-            android:layout_height="160dp"
+            android:layout_height="140dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_panel"
             android:divider="@color/hairline"
@@ -166,14 +195,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/found_devices"
+            android:layout_marginTop="18dp"
+            android:text="@string/saved_devices"
             style="@style/Text.Title" />
 
         <ListView
-            android:id="@+id/lv_found"
+            android:id="@+id/lv_saved"
             android:layout_width="match_parent"
-            android:layout_height="160dp"
+            android:layout_height="140dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_panel"
             android:divider="@color/hairline"

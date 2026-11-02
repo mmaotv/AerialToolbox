@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  胶囊的焦点环：只画描边、不画底，叠在胶囊背景上就是一个圆角环。
+
+  之前这里用的是系统 selectableItemBackground，聚焦时会在胶囊上盖一块**方形**灰底——
+  和 999dp 圆角的胶囊形状对不上，看起来像渲染错位。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="2dp"
+                android:color="@color/focus" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#33FFFFFF" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <item android:drawable="@android:color/transparent" />
+</selector>

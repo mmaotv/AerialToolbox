@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  手机端的「开 ADB」帮助弹窗：内容与电视端 AdbHelpActivity 同源（core 的 AdbGuide），
+  只是手机上用可滚动的文本列表就够了——手指能滑，不需要可聚焦的行。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="330dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@style/Text.Title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/adb_help_title" />
+
+        <TextView
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/adb_help_sub" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="340dp"
+            android:layout_marginTop="12dp"
+            android:scrollbars="vertical">
+
+            <LinearLayout
+                android:id="@+id/brandList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <Button
+            android:id="@+id/btn_ok"
+            style="@style/Btn.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="14dp"
+            android:text="@string/btn_ok" />
+    </LinearLayout>
+</FrameLayout>
