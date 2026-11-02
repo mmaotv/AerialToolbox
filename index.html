@@ -235,7 +235,7 @@
       <div class="step">
         <div class="n">STEP 03</div>
         <h3>点安装，然后验收</h3>
-        <p>选 Aerial 或 CleanYourTV → 一键安装 → 点「验收检查」，通过就说明主页键已经接管成功。</p>
+        <p>选 Aerial 或 CleanYourTV → 点最上面那张大卡安装 → 装完它就变成「验收检查」，按一次主页键就知道接管成功没有。</p>
       </div>
     </div>
   </div>
@@ -249,6 +249,10 @@
       <p class="sec-sub">打开后设备自己就在 5555 端口监听，手机端直接连即可。隐藏入口会随固件版本变动，以下路径以实机为准。</p>
       <p class="sec-sub-en">Once enabled, adbd listens on port 5555 — your phone can connect directly. Hidden entries vary by firmware.</p>
     </div>
+
+    <ul class="tips" style="margin-top:0;margin-bottom:20px">
+      <li><span class="mk">◆</span><span>这张表在 App 里也有：电视端顶栏的 <b>「? 按钮」</b>、手机端的「电视上怎么开 ADB？」，随时遥控器翻着看，不用回来找网页。</span></li>
+    </ul>
 
     <div class="adb">
       <div class="adb-head"><div>品牌 / 机型</div><div>打开路径</div></div>
@@ -281,8 +285,16 @@
         <div class="adb-path">设置 → 关于本机 → 版本号连按 7 次 → 系统和更新 → 开发人员选项 → <b>USB 调试 + 启用 ADB</b></div>
       </div>
       <div class="adb-row">
-        <div class="adb-brand">长虹 / 康佳 / 乐视</div>
-        <div class="adb-path">长虹：菜单 → 情景模式 → 标准模式 → 输 <b>0816</b>；康佳：按菜单键输 <b>2008</b>；乐视：信号源 → 输 <b>2580</b> → ADB 调试 → 重启</div>
+        <div class="adb-brand">长虹</div>
+        <div class="adb-path">菜单键 → 情景模式 → 标准模式 → 输入 <b>0816</b> → 找到 ADB 调试并打开</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">康佳</div>
+        <div class="adb-path">遥控器按菜单键 → 输入 <b>2008</b> → 出现工厂菜单 → 打开 ADB</div>
+      </div>
+      <div class="adb-row">
+        <div class="adb-brand">乐视</div>
+        <div class="adb-path">进入「信号源」→ 输入 <b>2580</b> → ADB 调试打开 → 重启电视生效</div>
       </div>
       <div class="adb-row">
         <div class="adb-brand">天猫魔盒 / 当贝<br><span>外贸盒子 HK1 / X96 / Mecool</span></div>
@@ -317,6 +329,12 @@
     </div>
     <div class="grid g2">
       <div class="card">
+        <div class="ico">🎯</div>
+        <h3>首屏只说一件事</h3>
+        <div class="h3-en">One clear next step</div>
+        <p>界面跟着状态走：<b>没连上</b>就只教第一步开 ADB；<b>连上没装</b>就只给一张「安装桌面」大卡；<b>装好了</b>大卡自己变成「验收检查」。一屏最多 4 个入口，其余收进「更多功能」。<span class="en">The first screen adapts: guide → install → verify. At most 4 entry points, the rest live in "More".</span></p>
+      </div>
+      <div class="card">
         <div class="ico">📦</div>
         <h3>内置离线安装包</h3>
         <div class="h3-en">Bundled offline APKs</div>
@@ -324,15 +342,21 @@
       </div>
       <div class="card">
         <div class="ico">📱</div>
-        <h3>手机远程也能装</h3>
-        <div class="h3-en">Install from your phone</div>
-        <p>手边没电脑？手机端填电视 IP 或扫局域网即可远程安装，还自带遥控器和截图。<span class="en">No PC needed: type the TV IP or scan the LAN, then install remotely with a built-in remote &amp; screenshot.</span></p>
+        <h3>手机端一屏不塞满</h3>
+        <div class="h3-en">Phone UI stays quiet</div>
+        <p>一个整宽大按钮负责「装」，次要操作一行三个；安装选项和运行日志默认折叠成一行摘要，<b>日志里出现「失败 / 异常」才自动展开</b>。<span class="en">One big install button; options and logs collapse to a one-line summary and auto-expand only on errors.</span></p>
+      </div>
+      <div class="card">
+        <div class="ico">📶</div>
+        <h3>手机连电视不用电脑</h3>
+        <div class="h3-en">Phone only, no PC</div>
+        <p>进连接页自动扫一次局域网，扫到点一下就直连；端口收进「高级」，正常根本不用管。<span class="en">Auto-scan on open, tap to connect; the port hides under "Advanced".</span></p>
       </div>
       <div class="card">
         <div class="ico">🛡️</div>
         <h3>接管 / 修复 / 验收</h3>
         <div class="h3-en">Take over · Repair · Verify</div>
-        <p>装完主页键回原桌面？「修复接管」只重跑授权；「验收检查」按一次主页键确认进的是新桌面。<span class="en">HOME still returns to stock? Repair re-runs grants only; Verify presses HOME and checks the foreground window.</span></p>
+        <p>装完主页键回原桌面？「更多功能 → 修复主页键」只重跑授权；「验收检查」按一次主页键确认进的是新桌面。<span class="en">HOME still returns to stock? Repair re-runs grants only; Verify presses HOME and checks the foreground window.</span></p>
       </div>
       <div class="card">
         <div class="ico">🔌</div>
@@ -357,8 +381,9 @@
         <h3>📺 电视端 <span class="tag">TV</span></h3>
         <ul>
           <li><span class="mk">▸</span><span><b>装在盒子上</b>，连自己的 adbd（127.0.0.1:5555），一劳永逸</span></li>
-          <li><span class="mk">▸</span><span>顶栏切换 Aerial / CleanYourTV，宫格随语义换一套</span></li>
-          <li><span class="mk">▸</span><span>一键安装 / 桌面更新 / 修复接管 / 验收检查 / 还原卸载</span></li>
+          <li><span class="mk">▸</span><span>顶栏切换 Aerial / CleanYourTV，<b>一张主卡 + 三张次卡</b>，其余进「更多功能」</span></li>
+          <li><span class="mk">▸</span><span>主卡跟着状态变：没连上→教开 ADB，没装→安装，装了→验收检查</span></li>
+          <li><span class="mk">▸</span><span>顶栏 <b>「?」一键看 11 个品牌的 ADB 路径</b>，遥控器可翻页</span></li>
           <li><span class="mk">▸</span><span>安装通道（标准 ⇄ guard）、ADB 常开、屏保接管等开关</span></li>
           <li><span class="mk">▸</span><span>包名 <b>com.miaomiaotv.aerial</b></span></li>
         </ul>
@@ -366,9 +391,10 @@
       <div class="app-card">
         <h3>📱 手机端 <span class="tag">Phone</span></h3>
         <ul>
-          <li><span class="mk">▸</span><span><b>装在手机上</b>，填电视 IP（默认 5555）或扫描局域网，<b>不需要电脑</b></span></li>
+          <li><span class="mk">▸</span><span><b>装在手机上</b>，进连接页<b>自动扫一次局域网</b>，扫到点一下就直连</span></li>
+          <li><span class="mk">▸</span><span>也可以直接填电视 IP（端口收在「高级」里，默认 5555），<b>不需要电脑</b></span></li>
           <li><span class="mk">▸</span><span>连过的设备存成历史，点一下就连</span></li>
-          <li><span class="mk">▸</span><span>主页显示型号 / 系统版本 / 当前桌面 / 已装版本</span></li>
+          <li><span class="mk">▸</span><span>主页显示型号 / 系统版本 / 当前桌面 / 已装版本，一个整宽大按钮负责安装</span></li>
           <li><span class="mk">▸</span><span>内置<b>遥控器</b>（方向/确认/主页/返回/菜单/电源）与<b>截图</b></span></li>
           <li><span class="mk">▸</span><span>包名 <b>com.miaomiaotv.aerial.phone</b></span></li>
         </ul>
@@ -383,18 +409,19 @@
     <div class="sec-head">
       <div class="kicker">Screenshots</div>
       <h2>界面一览</h2>
-      <p class="sec-sub">电视端双模式主界面：一屏放下安装、更新、修复、验收与各开关。</p>
+      <p class="sec-sub">电视端首屏只有三件事：告诉你现在什么状态、下一步点哪里、别的都收起来。</p>
     </div>
     <div class="shots">
       <div class="shot">
-        <img src="assets/screenshot-main.png" alt="桌面工具箱 · Aerial 模式">
-        <div class="cap"><b>Aerial 模式</b> — 标准/守护通道、ADB 常开、屏保接管</div>
+        <img src="assets/screenshot-guide.png" alt="桌面工具箱 · 未连接时的引导界面">
+        <div class="cap"><b>没连上时</b> — 整屏只教一件事：先把 ADB 打开（附品牌路径 + 中文失败原因）</div>
       </div>
       <div class="shot">
-        <img src="assets/screenshot-cleantv.png" alt="桌面工具箱 · CleanYourTV 模式">
-        <div class="cap"><b>CleanYourTV 模式</b> — 遥控器按键、Home 键兼容</div>
+        <img src="assets/screenshot-main.png" alt="桌面工具箱 · 已连接时的首屏">
+        <div class="cap"><b>连上之后</b> — 一张主卡（已装则变「验收检查」）+ 三张次卡，顶栏「?」常驻品牌帮助</div>
       </div>
     </div>
+    <p class="mini-note">装在电视 / 盒子上跑，<b>720p 到 4K</b> 都按遥控器单屏布局验证过：没有长列表，聚焦到哪滚到哪，不会跑到屏幕外面去。</p>
   </div>
 </section>
 
@@ -407,13 +434,13 @@
       <div class="row">
         <div class="pill">
           <span class="t">📺 电视端（装在盒子上）</span>
-          <span class="v">v1.3.4</span>
-          <a href="https://github.com/mmaotv/AerialToolbox/releases/download/v1.3.4/AerialToolbox-1.3.4.apk" target="_blank" rel="noopener">AerialToolbox-1.3.4.apk ↓</a>
+          <span class="v">v1.3.5</span>
+          <a href="https://github.com/mmaotv/AerialToolbox/releases/download/v1.3.5/AerialToolbox-1.3.5.apk" target="_blank" rel="noopener">AerialToolbox-1.3.5.apk ↓</a>
         </div>
         <div class="pill">
           <span class="t">📱 手机端（填 IP 远程装）</span>
-          <span class="v">v1.0.2</span>
-          <a href="https://github.com/mmaotv/AerialToolbox/releases/download/phone-v1.0.2/AerialToolbox-Phone-1.0.2.apk" target="_blank" rel="noopener">AerialToolbox-Phone-1.0.2.apk ↓</a>
+          <span class="v">v1.0.3</span>
+          <a href="https://github.com/mmaotv/AerialToolbox/releases/download/phone-v1.0.3/AerialToolbox-Phone-1.0.3.apk" target="_blank" rel="noopener">AerialToolbox-Phone-1.0.3.apk ↓</a>
         </div>
       </div>
       <p class="note">所有版本与更新日志见 <a href="https://github.com/mmaotv/AerialToolbox/releases" target="_blank" rel="noopener" style="color:var(--blue)">GitHub Releases</a> · 源码以 MIT 协议开源</p>
